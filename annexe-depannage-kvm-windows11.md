@@ -1,7 +1,7 @@
 # Annexe — Dépannage KVM sous Windows 11
 
 Cette annexe traite l’absence de `/dev/kvm` dans la VM `lab-openstack` lorsque
-l’hôte est sous Windows 11. Elle complète l’exercice 0.2 du
+l’hôte est sous Windows 11. Elle complète l’[exercice 0.2](jour-1.md#j1-ex-0-2) du
 [jour 1](jour-1.md) et la section « Virtualisation imbriquée ».
 
 ## Symptômes
@@ -53,9 +53,9 @@ Interprétation :
 | Résultat | Action |
 |---|---|
 | `VirtualizationFirmwareEnabled` = `False` | Activer VT-x/AMD-V dans le BIOS/UEFI |
-| `systeminfo` affiche « A hypervisor has been detected » | Désactiver Hyper-V/VBS (sections 2 et 3) |
-| `hypervisorlaunchtype` = `Auto` | Passer à `off` (section 2) |
-| Une fonctionnalité listée est `Enabled` | La désactiver (section 2) |
+| `systeminfo` affiche « A hypervisor has been detected » | Désactiver Hyper-V/VBS ([sections 2](#2-désactiver-hyper-v-et-les-plateformes-associées) et [3](#3-désactiver-vbs--intégrité-de-la-mémoire)) |
+| `hypervisorlaunchtype` = `Auto` | Passer à `off` ([section 2](#2-désactiver-hyper-v-et-les-plateformes-associées)) |
+| Une fonctionnalité listée est `Enabled` | La désactiver ([section 2](#2-désactiver-hyper-v-et-les-plateformes-associées)) |
 
 ## 2. Désactiver Hyper-V et les plateformes associées
 
@@ -75,7 +75,7 @@ Remarques :
 - Sur Windows 11 Édition Famille, certaines fonctionnalités n’existent pas :
   l’erreur « feature not found » peut être ignorée.
 - Cette désactivation casse WSL2, Docker Desktop (backend WSL2), Windows
-  Sandbox et l’isolation du noyau. À réactiver après le laboratoire (section 9).
+  Sandbox et l’isolation du noyau. À réactiver après le laboratoire ([section 9](#9-réactiver-lenvironnement-après-le-laboratoire)).
 
 ## 3. Désactiver VBS / Intégrité de la mémoire
 
@@ -121,7 +121,7 @@ La VM doit être **éteinte**.
 ```
 
 Dans l’interface : **Configuration → Système → Processeur → Activer la
-virtualisation imbriquée (VT-x/AMD-V)**, avec 4 vCPU minimum.
+virtualisation imbriquée (VT-x/AMD-V)**, avec 3 vCPU (4 si l’hôte est dédié).
 
 Contrôle décisif dans le journal VirtualBox
 (`%USERPROFILE%\VirtualBox VMs\lab-openstack\Logs\VBox.log`) :
@@ -129,7 +129,7 @@ Contrôle décisif dans le journal VirtualBox
 | Ligne du journal | Signification |
 |---|---|
 | `HM: Using VT-x/AMD-V` | Correct : VirtualBox accède directement à la virtualisation |
-| `HM: Using WHV` | Hyper-V/WHP est encore actif : reprendre les sections 2 et 3 |
+| `HM: Using WHV` | Hyper-V/WHP est encore actif : reprendre les [sections 2](#2-désactiver-hyper-v-et-les-plateformes-associées) et [3](#3-désactiver-vbs--intégrité-de-la-mémoire) |
 | `HM: Disabled` | Virtualisation désactivée côté BIOS ou VirtualBox |
 
 VirtualBox 7.x est requis pour la virtualisation imbriquée récente.

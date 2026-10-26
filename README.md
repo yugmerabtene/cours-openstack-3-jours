@@ -6,7 +6,7 @@ démonstrations et LAB guidés dans une machine virtuelle Ubuntu.
 
 Le dépôt contient les trois supports de cours en Markdown, accompagnés de ce
 README. Aucune machine virtuelle préconstruite n’est fournie : la VM est créée
-pas à pas au jour 1.
+pas à pas au [jour 1](jour-1.md).
 
 ## Sommaire
 
@@ -30,17 +30,17 @@ Le parcours part des concepts du cloud privé, puis installe un cloud OpenStack
 de démonstration avec DevStack. Il progresse ensuite vers l’administration des
 services, la surveillance, le dépannage, la sécurité et la sauvegarde.
 
-Le fil conducteur est concret : une analyse des besoins réalisée au jour 1
-devient une architecture cible au jour 3, déployée sous forme de deux projets
+Le fil conducteur est concret : une analyse des besoins réalisée au [jour 1](jour-1.md)
+devient une architecture cible au [jour 3](jour-3.md), déployée sous forme de deux projets
 isolés, puis sécurisée et sauvegardée.
 
-- **Jour 1** : concepts du cloud, modèles IaaS, PaaS et SaaS, analyse des
+- **[Jour 1](jour-1.md)** : concepts du cloud, modèles IaaS, PaaS et SaaS, analyse des
   besoins, présentation d’OpenStack, installation de DevStack et premiers
   contrôles du cloud.
-- **Jour 2** : configuration avancée de Keystone, Neutron, Nova et Glance,
+- **[Jour 2](jour-2.md)** : configuration avancée de Keystone, Neutron, Nova et Glance,
   utilisation d’Horizon, surveillance des performances, lecture des journaux,
   dépannage et maintenance de DevStack.
-- **Jour 3** : conception d’une architecture cible, déploiement d’un scénario
+- **[Jour 3](jour-3.md)** : conception d’une architecture cible, déploiement d’un scénario
   multi-projets, validation des accès, application du moindre privilège,
   optimisation, sauvegarde et restauration.
 
@@ -102,7 +102,7 @@ et sauvegarde de la configuration.
 
 ### Jour 3 — Conception, sécurisation et sauvegarde
 
-La matinée transforme la note d’analyse du jour 1 en architecture cible
+La matinée transforme la note d’analyse du [jour 1](jour-1.md) en architecture cible
 dimensionnée pour la VM du laboratoire. Les participants déploient un scénario
 complet avec deux projets isolés, un serveur web et un serveur de base de
 données, puis valident la connectivité par adresse flottante et par SSH.
@@ -120,8 +120,8 @@ synthèse et une feuille de route.
 - Windows 10 ou 11 avec VirtualBox 7.x, ou un hôte Linux disposant des mêmes
   fonctions de virtualisation.
 - Virtualisation matérielle activée dans le BIOS ou l’UEFI.
-- Assez de mémoire pour allouer 8 Go à la VM ; 4 vCPU et au moins 60 Go
-  d’espace disque libre.
+- Assez de mémoire pour allouer 10 Go à la VM ; 3 vCPU (4 si l’hôte est
+  dédié) et au moins 80 Go d’espace disque libre (60 Go minimum en scénario B).
 - Accès Internet pour télécharger l’image Ubuntu, les paquets et le dépôt
   DevStack.
 - Sous Windows 11, si `/dev/kvm` est absent dans la VM (Hyper-V, WSL2 ou VBS
@@ -140,8 +140,8 @@ synthèse et une feuille de route.
 - Chaque journée représente environ 6 heures, avec une pause déjeuner.
 - La création de la VM et l’installation de DevStack peuvent prendre plusieurs
   heures ; `stack.sh` demande généralement de 30 à 90 minutes.
-- Les trois journées s’enchaînent : les ressources créées au jour 1 servent au
-  jour 2, puis au jour 3.
+- Les trois journées s’enchaînent : les ressources créées au [jour 1](jour-1.md) servent au
+  [jour 2](jour-2.md), puis au [jour 3](jour-3.md).
 
 ## Organisation du dépôt
 
@@ -158,7 +158,7 @@ Les trois supports suivent un déroulé continu : chacun suppose que les LAB des
 journées précédentes ont été réalisés. Les commandes, les valeurs du
 laboratoire et les résultats attendus sont indiqués dans chaque fichier.
 
-L’annexe de dépannage KVM complète le préambule du jour 1 pour les hôtes
+L’annexe de dépannage KVM complète le préambule du [jour 1](jour-1.md) pour les hôtes
 Windows 11 dont la VM n’expose pas `/dev/kvm`.
 
 ## Démarrage rapide
@@ -184,8 +184,8 @@ Windows 11 dont la VM n’expose pas `/dev/kvm`.
   recopiés.
 - Les LAB produisent des livrables : inventaire, note d’analyse, scripts,
   captures et résultats de vérification. Les conserver pour la revue finale.
-- Le parcours privilégie un cloud minimal adapté à une VM de 8 Go. Swift n’est
-  pas requis par les LAB.
+- Le parcours privilégie un cloud minimal adapté à une VM de 10 Go (6 Go en
+  scénario B). Swift n’est pas requis par les LAB.
 - Les résultats peuvent varier selon la version de DevStack, la puissance de
   l’hôte et le débit du stockage.
 
@@ -206,7 +206,7 @@ Windows 11 dont la VM n’expose pas `/dev/kvm`.
 
 - Documentation OpenStack : <https://docs.openstack.org/>
 - DevStack : <https://docs.openstack.org/devstack/>
-- Notes de version 2026.1 : <https://releases.openstack.org/2026.1/>
+- Notes de version 2026.1 : <https://releases.openstack.org/gazpacho/>
 - Administration de Neutron et OVN :
   <https://docs.openstack.org/neutron/latest/admin/ovn/index.html>
 - CIS Benchmarks : <https://www.cisecurity.org/benchmarks>

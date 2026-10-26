@@ -8,7 +8,7 @@
 
 Ce préambule se traite en amont de S1. Chaque bloc précise s’il s’exécute sur la machine hôte (Windows + VirtualBox) ou dans la VM.
 
-**Identifiants du laboratoire.** Une seule valeur suffit : `lab123`. Valeur utilisée dans ce laboratoire, sans rapport avec un mot de passe d’entreprise, jamais réutilisée ailleurs.
+**Identifiants du laboratoire.** La valeur `lab123` est utilisée pour tous les comptes de ce laboratoire. Elle n’a aucun rapport avec un mot de passe d’entreprise et ne doit pas être réutilisée en dehors de ce cadre.
 
 | Élément | Valeur |
 |---------|--------|
@@ -20,7 +20,7 @@ Ce préambule se traite en amont de S1. Chaque bloc précise s’il s’exécute
 | Compte de la VM | `stack` / `lab123` (jamais `root`) |
 | Compte administrateur OpenStack | `admin` / `lab123` (Horizon et ligne de commande) |
 | Compte de démonstration | `demo` / `lab123` (créé par DevStack) |
-| Phrase secrète de chiffrement | `ENCRYPTION_PASS=lab123` (sauvegardes chiffrées des configurations, jour 3) |
+| Phrase secrète de chiffrement | `ENCRYPTION_PASS=lab123` (sauvegardes chiffrées des configurations, [jour 3](jour-3.md)) |
 | Interface Horizon | `http://192.168.56.10/dashboard` (navigateur de la machine hôte Windows) |
 
 **Accès à Horizon (fiche rapide).** L’interface se pilote depuis le navigateur de la machine hôte Windows, sans rien installer :
@@ -41,13 +41,13 @@ Ce préambule se traite en amont de S1. Chaque bloc précise s’il s’exécute
 
 **Création de la VM sous Windows + VirtualBox (étapes obligatoires).**
 
-1. **Prérequis** — VirtualBox 7.x installé (https://www.virtualbox.org), hôte avec 16 Go recommandé (8 Go possible avec une VM réduite), 80 Go d’espace disque libre sur un disque local, virtualisation matérielle activée dans le BIOS (VT-x pour Intel, AMD-V pour AMD). Télécharger l’ISO Ubuntu Server 24.04.5 LTS officielle.
+1. **Prérequis** — VirtualBox 7.x installé (https://www.virtualbox.org), hôte avec 16 Go recommandé (8 Go possible avec une VM de 6 Go, scénario B), 80 Go d’espace disque libre sur un disque local, virtualisation matérielle activée dans le BIOS (VT-x pour Intel, AMD-V pour AMD). Télécharger l’ISO Ubuntu Server 24.04.5 LTS officielle.
 2. **Créer le réseau host-only** — *Fichier → Outils → Réseau → onglet Host-only Networks → Créer*. Configurer l’interface : IPv4 `192.168.56.1`, Masque `255.255.255.0`, DHCP désactivé. Sous Windows, l’interface apparaît comme `VirtualBox Host-Only Ethernet Adapter` ; le nom logique `vboxnet0` existe surtout sous Linux.
-3. **Créer la VM** — *Machine → Nouvelle* : Nom `lab-openstack`, Dossier (disque local), Type `Linux`, Version `Ubuntu (64-bit)`. Mémoire : 10-12 Go si l’hôte a 16 Go ou plus, 4-6 Go si l’hôte a 8 Go. Disque dur virtuel : VDI, Dynamiquement alloué, 80 Go (60 Go minimum).
+3. **Créer la VM** — *Machine → Nouvelle* : Nom `lab-openstack`, Dossier (disque local), Type `Linux`, Version `Ubuntu (64-bit)`. Mémoire : 10 Go si l’hôte a 16 Go, 12-14 Go si l’hôte a 32 Go ou plus, 6 Go si l’hôte a 8 Go (scénario B). Disque dur virtuel : VDI, Dynamiquement alloué, 80 Go (60 Go minimum).
 4. **Configurer les adaptateurs réseau** — *Configuration → Réseau* :
    - Adaptateur 1 : Activé, Attaché à **NAT** (donne Internet à la VM)
    - Adaptateur 2 : Activé, Attaché à **Réseau host-only**, sélectionner le réseau créé à l’étape 2
-5. **Vérifier la virtualisation imbriquée** — *Configuration → Système → Processeur* : cocher *Activer la virtualisation imbriquée (VT-x/AMD-V)*. Nombre de processeurs : 4 minimum. Si Hyper-V, WSL2 ou l’Isolation du noyau (VBS) sont actifs sous Windows 11 et que `/dev/kvm` reste absent dans la VM, les désactiver.
+5. **Vérifier la virtualisation imbriquée** — *Configuration → Système → Processeur* : cocher *Activer la virtualisation imbriquée (VT-x/AMD-V)*. Nombre de processeurs : 3 sur un hôte 4c/4T (4 si l’hôte est dédié), 2 acceptable en scénario B/C. Si Hyper-V, WSL2 ou l’Isolation du noyau (VBS) sont actifs sous Windows 11, les désactiver **si** `/dev/kvm` est absent après l’installation d’Ubuntu (voir [exercice 0.2](#j1-ex-0-2)).
 6. **Monter l’ISO** — *Configuration → Stockage* : ajouter `ubuntu-24.04.5-live-server-amd64.iso`.
 7. **Installer Ubuntu Server** — Démarrer la VM et installer Ubuntu Server 24.04.5 LTS. Créer l’utilisateur `stack` avec le mot de passe `lab123` (le compte s’installe dans `/home/stack`). **Installer le serveur OpenSSH** (obligatoire pour la suite ; s’il n’est pas proposé, il sera ajouté à l’étape 10).
 8. **Identifier les interfaces** — Dans la VM : `ip link` puis `ip -br address`. Relever le nom de l’interface NAT (souvent `enp0s3`) et celui de l’interface host-only (souvent `enp0s8`). Ne pas se fier aveuglément au nom : VirtualBox peut attribuer `enp0s9` selon l’ordre des adaptateurs.
@@ -99,6 +99,8 @@ L'interface `VirtualBox Host-Only Ethernet Adapter` doit apparaître avec l'IP `
 
 > **Important** : Si DHCP est activé, le désactiver impérativement. Un DHCP actif peut attribuer une autre adresse à l'hôte et rendre impossible l'accès à `192.168.56.10`.
 
+<a id="j1-ex-0-1"></a>
+
 **Exercice 0.1 — Création de la VM et ressources (10 min)**
 
 ```text
@@ -111,19 +113,21 @@ L'interface `VirtualBox Host-Only Ethernet Adapter` doit apparaître avec l'IP `
 ```text
 # Côté machine hôte : ressources attribuées
 "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" showvminfo "lab-openstack" | findstr /C:"Memory" /C:"CPUs"
-# findstr : filtre sous Windows ; vérifier 4 CPU minimum et la RAM allouée
+# findstr : filtre sous Windows ; vérifier 3 CPU (4 si dédié) et la RAM allouée
 # Les libellés exacts varient selon la version de VirtualBox : sans filtre,
 #   showvminfo affiche aussi la mémoire et le nombre de processeurs
 ```
 
 - [ ] VM `lab-openstack` créée et enregistrée dans VirtualBox
-- [ ] RAM cohérente avec l’hôte (10-12 Go si hôte >= 16 Go, 4-6 Go si hôte 8 Go), 4 vCPU, disque 80 Go (60 Go minimum). Hyper-V/WSL2/VBS désactivés si la virtualisation imbriquée échoue.
+- [ ] RAM cohérente avec l’hôte (10 Go si hôte 16 Go, 12-14 Go si hôte 32 Go ou plus, 6 Go si hôte 8 Go en scénario B), 3 vCPU (4 si dédié), disque 80 Go dynamique (60 Go minimum). Hyper-V/WSL2/VBS désactivés si la virtualisation imbriquée échoue.
 - [ ] Adaptateurs : **NAT** (enp0s3) et **Host-Only** (nom Windows `VirtualBox Host-Only Ethernet Adapter`, logique `vboxnet0`) configurés (DHCP host-only désactivé), IP hôte `192.168.56.1/24`
 - [ ] Virtualisation imbriquée activée dans les paramètres VirtualBox (VM éteinte pour modification si nécessaire). Vérifier `/dev/kvm` dans la VM.
 - [ ] Interfaces vérifiées dans la VM : `ip link` et `ip -br address`. Identifier `enp0s3` (NAT/DHCP) et `enp0s8` (host-only) avant configuration.
 - [ ] Réseau configuré avec `netplan` : `enp0s3` DHCP, `enp0s8` statique `192.168.56.10/24` (sans gateway). Appliquer `sudo netplan apply`, `chmod 600` sur le YAML.
 - [ ] Depuis Windows : `ping -n 4 192.168.56.10` répond (utiliser `-n`, pas `-c`). `VBoxManage` utilisable avec chemin complet si absent du PATH.
 - [ ] Depuis la VM : `ip route | grep default` (passerelle NAT), `resolvectl status` (DNS), `ping -c 2 8.8.8.8` répond. L’accès à Horizon sera vérifié après l’installation de DevStack (J1S2).
+
+<a id="j1-ex-0-2"></a>
 
 **Exercice 0.2 — Machine virtuelle et virtualisation imbriquée (5 min)**
 
@@ -180,6 +184,8 @@ kvm-ok
 > Sans `/dev/kvm`, DevStack utilise QEMU : le cours reste faisable, les
 > instances sont seulement plus lentes.
 
+<a id="j1-ex-0-3"></a>
+
 **Exercice 0.3 — Réseau de gestion et accès SSH (5 min)**
 
 ```text
@@ -218,9 +224,11 @@ whoami && ip -br address
 - [ ] `ssh stack@192.168.56.10` ouvre une session, `whoami` affiche `stack`
 - [ ] `systemctl is-active ssh` renvoie `active`, `systemctl is-enabled ssh.socket` renvoie `enabled` (OpenSSH serveur installé), `192.168.56.10/24` visible sur `enp0s8`
 
+<a id="j1-ex-0-4"></a>
+
 **Exercice 0.4 — Identifiants et phrase secrète du laboratoire (5 min)**
 
-Le tableau d’ouverture donne tous les identifiants : `stack`, `admin`, `demo` et `ENCRYPTION_PASS`, de valeur `lab123` pour chacun. Aucun autre mot de passe n’est à inventer : `local.conf` (section 6) reprend exactement ces valeurs. `ENCRYPTION_PASS` n’est pas chargée par défaut ; elle s’exporte dans la session courante chaque fois qu’un outil en demande une.
+Le tableau d’ouverture donne tous les identifiants : `stack`, `admin`, `demo` et `ENCRYPTION_PASS`, de valeur `lab123` pour chacun. Aucun autre mot de passe n’est à inventer : `local.conf` ([section 6](#6-rédaction-du-fichier-localconf)) reprend exactement ces valeurs. `ENCRYPTION_PASS` n’est pas chargée par défaut ; elle s’exporte dans la session courante chaque fois qu’un outil en demande une.
 
 ```bash
 # Dans la VM : export de la phrase secrète de chiffrement
@@ -240,11 +248,11 @@ test -n "$ENCRYPTION_PASS" && echo "ENCRYPTION_PASS chargée"
 
 > **Attention (identifiants hors laboratoire)** — Les quatre valeurs ci-dessus sont publiées volontairement dans ce support : elles sont propres au laboratoire. Tout autre secret — jeton d’API, mot de passe d’entreprise, clé privée — recopié dans un fichier versionné, un message de commit ou une capture reste dans l’historique après correction : il faudrait réécrire l’historique, ce que ce projet interdit. Aucun secret réel dans un commit, aucun secret réel dans un message.
 
-Les quatre contrôles passés, le laboratoire est défini : VM `lab-openstack` joignable en `192.168.56.10` sous le compte `stack`, virtualisation imbriquée active, identifiants connus. Les sections 5 à 7 (compte `stack`, `local.conf`, relecture de l’installation DevStack) s’appuient sur cet état des lieux.
+Les quatre contrôles passés, le laboratoire est défini : VM `lab-openstack` joignable en `192.168.56.10` sous le compte `stack`, virtualisation imbriquée active, identifiants connus. Les [sections 5 à 7](#5-compte-stack-et-clonage-de-devstack) (compte `stack`, `local.conf`, relecture de l’installation DevStack) s’appuient sur cet état des lieux.
 
 ---
 
-**Fil conducteur :** l’analyse des besoins d’un cas d’entreprise produit une note, `note-besoins-cloud-prive.md`, qui servira de référence au dimensionnement du jour 3. L’après-midi, on poursuit avec la carte des services, puis on installe et met en service DevStack `stable/2026.1` dans la VM `lab-openstack` créée sous Windows + VirtualBox (NAT + Host-Only). On vérifie l’accès à Horizon depuis Windows et l’accès Internet de la VM. Ce cloud sert sans interruption aux jours 2 et 3.
+**Fil conducteur :** l’analyse des besoins d’un cas d’entreprise produit une note, `note-besoins-cloud-prive.md`, qui servira de référence au dimensionnement du [jour 3](jour-3.md). L’après-midi, on poursuit avec la carte des services, puis on installe et met en service DevStack `stable/2026.1` dans la VM `lab-openstack` créée sous Windows + VirtualBox (NAT + Host-Only). On vérifie l’accès à Horizon depuis Windows et l’accès Internet de la VM. Ce cloud sert sans interruption aux [jours 2](jour-2.md) et [3](jour-3.md).
 
 ---
 
@@ -309,7 +317,7 @@ Cinq caractéristiques définissent formellement un système Cloud :
 
 > **Bon à savoir** — La référence NIST (SP 800-145, *The NIST Definition of Cloud Computing*, Mell et Grance, 2011) est la définition citée dans les documents d’architecture et les appels d’offres. Deux de ses termes sont des anglicismes assumés : *provisioning* (mise à disposition) et *multi-tenant* (multi-locataire, partagé entre plusieurs clients).
 
-> **Pourquoi le « service mesuré » est-il central en entreprise ?** — Sans comptabilité de l’usage, impossible de répartir un coût de centre informatique entre directions, de détecter un abus ou de justifier un dimensionnement. C’est ce service qui rend possible la gouvernance des quotas (jour 2) et le dimensionnement (jour 3).
+> **Pourquoi le « service mesuré » est-il central en entreprise ?** — Sans comptabilité de l’usage, impossible de répartir un coût de centre informatique entre directions, de détecter un abus ou de justifier un dimensionnement. C’est ce service qui rend possible la gouvernance des quotas ([jour 2](jour-2.md)) et le dimensionnement ([jour 3](jour-3.md)).
 
 #### 2. Les trois modèles de service : IaaS, PaaS, SaaS
 
@@ -383,7 +391,7 @@ Le Cloud privé répond à un objectif précis : obtenir l’agilité d’un Clo
 
 #### 5. Étude de cas : analyse des besoins pour un Cloud privé
 
-L’étude de cas occupe le bloc de 10h15 à 11h15. Elle n’est pas une démonstration : elle produit un livrable, la **note d’analyse des besoins**, enregistrée sous le nom `note-besoins-cloud-prive.md` dans le répertoire de travail de la formation. Cette note sera relue au jour 3 pour justifier le dimensionnement de l’architecture cible ; elle constitue le premier livrable de la formation et l’entrée du calcul de dimensionnement.
+L’étude de cas occupe le bloc de 10h15 à 11h15. Elle n’est pas une démonstration : elle produit un livrable, la **note d’analyse des besoins**, enregistrée sous le nom `note-besoins-cloud-prive.md` dans le répertoire de travail de la formation. Cette note sera relue au [jour 3](jour-3.md) pour justifier le dimensionnement de l’architecture cible ; elle constitue le premier livrable de la formation et l’entrée du calcul de dimensionnement.
 
 **Contexte :** Une direction des systèmes d’information d’une administration souhaite substituer à la multiplication des machines virtuelles isolées un cloud privé unique. Elle doit y héberger : des environnements de test et de recette pour une douzaine d’équipes projet ; des services web internes accessibles depuis le réseau de l’administration ; le stockage de documents métier sensibles ; des bancs d’essai pour de nouvelles applications. Contraintes exprimées : les données ne doivent pas sortir du périmètre de l’administration, chaque direction ne doit pas voir les ressources des autres, et le coût doit rester prévisible et répartissable.
 
@@ -395,12 +403,12 @@ L’étude de cas occupe le bloc de 10h15 à 11h15. Elle n’est pas une démons
 | 2 | Quelles ressources de calcul et à quelle cadence ? | Graines (flavors), quotas, planification (Nova, Placement) | Nombre et taille des machines virtuelles |
 | 3 | Comment isoler les flux et les équipes ? | Réseaux, sous-réseaux, routeurs, groupes de sécurité (Neutron) | Nombre de réseaux locataires |
 | 4 | Quelles données, quel niveau de sensibilité, quelle durée de rétention ? | Images (Glance), volumes (Cinder), objets (Swift) | Type de stockage et politique de sauvegarde |
-| 5 | Quelle disponibilité, quelles performances, quel budget ? | Dimensionnement matériel, redondance, choix des services | Scénario matériel (jour 3) |
-| 6 | Comment l’exploiter au quotidien ? | Journalisation, surveillance, mises à jour | Rôles d’exploitation, outils de surveillance (jour 2) |
+| 5 | Quelle disponibilité, quelles performances, quel budget ? | Dimensionnement matériel, redondance, choix des services | Scénario matériel ([jour 3](jour-3.md)) |
+| 6 | Comment l’exploiter au quotidien ? | Journalisation, surveillance, mises à jour | Rôles d’exploitation, outils de surveillance ([jour 2](jour-2.md)) |
 
 > **Concept clé** — La note d’analyse des besoins est le **point d’entrée du dimensionnement**. Dimensionner avant d’avoir répondu aux six questions conduit à acheter du matériel dont personne ne se servira, ou à construire une plateforme qui refusera la première demande réelle. D’où la production de ce livrable avant même l’installation d’OpenStack.
 
-Enchaînement des livrables : la note (jour 1) éclaire le dimensionnement (jour 3) ; le cloud installé (jour 1) reçoit la configuration (jour 2), puis les instances et la politique de sécurité (jour 3).
+Enchaînement des livrables : la note ([jour 1](jour-1.md)) éclaire le dimensionnement ([jour 3](jour-3.md)) ; le cloud installé ([jour 1](jour-1.md)) reçoit la configuration ([jour 2](jour-2.md)), puis les instances et la politique de sécurité ([jour 3](jour-3.md)).
 
 #### 6. OpenStack, partie 1 : histoire et cycles de versions
 
@@ -424,7 +432,7 @@ OpenStack est né en 2010 d’une convergence entre un projet de la NASA (Nebula
 
 #### 7. Gouvernance : l’Open Infrastructure Foundation
 
-OpenStack n’est pas la propriété d’une entreprise : il est gouverné par une fondation à but non lucratif, l’**Open Infrastructure Foundation** (OpenInfra Foundation), hébergée au sein de la Linux Foundation. Issue de l’OpenStack Foundation créée en 2012, elle a élargi sa mission en 2020-2021 au-delà du seul OpenStack, tout en continuant d’en assurer la gouvernance.
+OpenStack n’est pas la propriété d’une entreprise : il est gouverné par une fondation à but non lucratif, l’**[Open Infrastructure Foundation](https://openinfra.org/)** (OpenInfra Foundation), hébergée au sein de la Linux Foundation. Issue de l’OpenStack Foundation créée en 2012, elle a élargi sa mission en 2020-2021 au-delà du seul OpenStack, tout en continuant d’en assurer la gouvernance.
 
 | Organe | Composition | Rôle |
 |--------|-------------|------|
@@ -459,7 +467,7 @@ Des services transverses assurent ce fonctionnement :
 
 > **Concept clé** — Dans OpenStack, **tout passe par Keystone** : aucune ressource n’est créée, consultée ni modifiée sans jeton valide et sans rôle l’autorisant. Cette centralité est la raison pour laquelle la sécurité d’OpenStack se joue d’abord sur la gestion des identités, et c’est le premier domaine du référentiel de sécurité appliqué dans cette séquence.
 
-> **Bon à savoir (diagnostic)** — Chaque service possède ses journaux et sa base : une panne concerne un service précis. Si les instances ne se créent pas mais que les réseaux fonctionnent, le problème est côté Nova. La méthode du jour 2 exploite cette séparation.
+> **Bon à savoir (diagnostic)** — Chaque service possède ses journaux et sa base : une panne concerne un service précis. Si les instances ne se créent pas mais que les réseaux fonctionnent, le problème est côté Nova. La méthode du [jour 2](jour-2.md) exploite cette séparation.
 
 #### 9. Positionnement : OpenStack, vSphere, Hyper-V et Kubernetes
 
@@ -498,15 +506,17 @@ Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contr
 |---------|--------|
 | Poste de travail | Machine hôte Windows 10/11 exécutant Oracle VirtualBox 7.x ; le travail se fait dans la VM `lab-openstack` (Ubuntu Server 24.04.5) |
 | Outils | Client SSH Windows (inclus depuis Windows 10 1809), terminal dans la VM, éditeur de texte (`nano`, `vim` ou équivalent), accès Internet pour la documentation |
-| Répertoire de travail | `~/formation-openstack/` (créé dans l’exercice 1.1) |
+| Répertoire de travail | `~/formation-openstack/` (créé dans l’[exercice 1.1](#j1-ex-1-1)) |
 | Livrable | `~/formation-openstack/note-besoins-cloud-prive.md` |
 | Durée | 60 min (10h15-11h15) |
 
 Les exercices s’enchaînent : chacun produit un contenu que le suivant consomme.
 
+<a id="j1-ex-1-1"></a>
+
 **Exercice 1.1 — Inventaire de la VM et des ressources disponibles (15 min)**
 
-Avant de dimensionner un cloud, on inventorie la machine qui devra l’héberger. Ce relevé servira au jour 3 à confronter le besoin au matériel réel. **Toutes les commandes de cet exercice s’exécutent dans la VM `lab-openstack`** (Ubuntu), et non dans l’invite de commandes Windows : `hostnamectl`, `lscpu`, `free`, `df` et `ip` sont des commandes Linux. Depuis Windows, la connexion se fait par `ssh stack@192.168.56.10`.
+Avant de dimensionner un cloud, on inventorie la machine qui devra l’héberger. Ce relevé servira au [jour 3](jour-3.md) à confronter le besoin au matériel réel. **Toutes les commandes de cet exercice s’exécutent dans la VM `lab-openstack`** (Ubuntu), et non dans l’invite de commandes Windows : `hostnamectl`, `lscpu`, `free`, `df` et `ip` sont des commandes Linux. Depuis Windows, la connexion se fait par `ssh stack@192.168.56.10`.
 
 ```bash
 # Création du répertoire de travail : tous les livrables de la formation y sont déposés
@@ -544,6 +554,8 @@ ip -br address >> ~/formation-openstack/inventaire-poste.txt
 - [ ] Fichier `inventaire-poste.txt` renseigné (processeur, mémoire, disque, `/dev/kvm`, interfaces)
 - [ ] Ressources relevées : nombre de cœurs, RAM, espace disque, présence ou absence de `/dev/kvm`
 
+<a id="j1-ex-1-2"></a>
+
 **Exercice 1.2 — Cahier des charges de l’étude de cas (15 min)**
 
 À partir du contexte présenté en séance (administration, douzaine d’équipes, données sensibles, isolation par direction), décrire dans le gabarit de la note les acteurs et leurs attentes.
@@ -554,7 +566,9 @@ nano ~/formation-openstack/note-besoins-cloud-prive.md
 # nano : éditeur simple du terminal ; CTRL+O pour enregistrer, CTRL+X pour sortir
 ```
 
-Structure imposée de la note (à respecter pour la relecture du jour 3) :
+<a id="j1-note-structure"></a>
+
+Structure imposée de la note (à respecter pour la relecture du [jour 3](jour-3.md)) :
 
 ```markdown
 # Note d’analyse des besoins — Cloud privé
@@ -570,7 +584,9 @@ Structure imposée de la note (à respecter pour la relecture du jour 3) :
 ```
 
 - [ ] Gabarit créé sous le nom `note-besoins-cloud-prive.md`
-- [ ] Sections 1 et 2 remplies (acteurs, inventaire repris de l’exercice 1.1)
+- [ ] [Sections 1 et 2](#j1-note-structure) remplies (acteurs, inventaire repris de l’[exercice 1.1](#j1-ex-1-1))
+
+<a id="j1-ex-1-3"></a>
 
 **Exercice 1.3 — Besoins de calcul, de réseau et de stockage (15 min)**
 
@@ -594,9 +610,11 @@ Traduire les attentes exprimées en besoins chiffrés, en utilisant les six ques
 - [ ] Besoins de réseau et d’isolation documentés (un réseau par direction ?)
 - [ ] Besoins de stockage qualifiés (blocs, objets, rétention)
 
+<a id="j1-ex-1-4"></a>
+
 **Exercice 1.4 — Choix du modèle de déploiement (10 min)**
 
-Comparer, pour ce cas précis, les modèles public, privé et hybride, puis trancher dans la section 7 de la note. Le choix doit s’appuyer sur deux critères du cas : la sensibilité des données et l’isolation entre directions.
+Comparer, pour ce cas précis, les modèles public, privé et hybride, puis trancher dans la [section 7 de la note](#j1-note-structure). Le choix doit s’appuyer sur deux critères du cas : la sensibilité des données et l’isolation entre directions.
 
 ```bash
 # Relecture du tableau comparatif de la séance puis écriture de la justification
@@ -608,7 +626,9 @@ grep -n "^##" ~/formation-openstack/note-besoins-cloud-prive.md
 
 - [ ] Les trois modèles comparés dans le contexte du cas
 - [ ] Choix écrit et justifié (au moins deux arguments issus du cas)
-- [ ] Hypothèses de dimensionnement et marges renseignées (section 8)
+- [ ] Hypothèses de dimensionnement et marges renseignées ([section 8](#j1-note-structure))
+
+<a id="j1-ex-1-5"></a>
 
 **Exercice 1.5 — Auto-contrôle de la note (5 min)**
 
@@ -630,23 +650,23 @@ ls -l ~/formation-openstack/
 
 Appliquer la chaîne **besoin → exigence technique → ressource OpenStack → commande** sur les sections restantes de votre note, puis situer votre inventaire par rapport au scénario recommandé.
 
-1. Reprendre la section 4 (isolation réseau) : à partir de l’énoncé du cas (« chaque direction ne voit pas les ressources des autres »), écrire l’exigence technique (« un réseau locataire par direction, isolé des autres, filtré par des groupes de sécurité »), puis rattacher la ressource OpenStack correspondante (réseau Neutron par direction, groupe de sécurité bloquant l’entrée par défaut). Les commandes exactes sont vues au jour 2 : se contenter ici de la correspondance.
-2. Répéter l’opération pour les sections 5 (sécurité) et 6 (choix technique), si elles ne sont pas encore renseignées.
-3. Ouvrir `inventaire-poste.txt` : comparer chaque valeur au scénario recommandé (A : 16 Go de mémoire, 4 cœurs). Noter l’écart éventuel et son impact dans la section 8 (hypothèses de dimensionnement).
+1. Reprendre la [section 4 (isolation réseau)](#j1-note-structure) : à partir de l’énoncé du cas (« chaque direction ne voit pas les ressources des autres »), écrire l’exigence technique (« un réseau locataire par direction, isolé des autres, filtré par des groupes de sécurité »), puis rattacher la ressource OpenStack correspondante (réseau Neutron par direction, groupe de sécurité bloquant l’entrée par défaut). Les commandes exactes sont vues au [jour 2](jour-2.md) : se contenter ici de la correspondance.
+2. Répéter l’opération pour les [sections 6 (sécurité) et 7 (choix technique)](#j1-note-structure), si elles ne sont pas encore renseignées.
+3. Ouvrir `inventaire-poste.txt` : comparer chaque valeur au scénario recommandé (A : hôte 16 Go, 4 cœurs ; VM 3 vCPU / 10 Go). Noter l’écart éventuel et son impact dans la [section 8 (hypothèses de dimensionnement)](#j1-note-structure).
 
 - [ ] Chaque section de la note relie au moins une exigence technique à une ressource OpenStack
-- [ ] Écart éventuel avec le scénario A consigné dans la section 8 avec son impact
+- [ ] Écart éventuel avec le scénario A consigné dans la [section 8 avec son impact](#j1-note-structure)
 
 <details>
 <summary>Correction pas à pas — Lab J1S1</summary>
 
 **Exercice 1.1 — Inventaire**
 
-`hostnamectl` confirme la distribution (Ubuntu LTS attendue) et le nom du poste. `lscpu` donne le nombre de cœurs et, dans la colonne « Virtualization », la capacité du processeur à héberger des machines virtuelles ; c’est cette capacité que `kvm-ok` vérifie au préambule (exercice 0.2). `free -h` indique la mémoire réelle disponible — c’est elle qui décide du scénario (A recommandé à 16 Go, B serré à 8 Go). `df -h /` doit montrer un espace compatible avec le disque virtuel de 60 à 80 Go requis (alloué dynamiquement). `ls -l /dev/kvm` : deux résultats possibles, tous acceptables — périphérique présent (instances rapides) ou message d’erreur (bascule QEMU, instances plus lentes). `ip -br address` fait apparaître les interfaces de la machine hôte ; elles serviront à choisir le mode d’accès à Horizon (host-only recommandé, lab J1S2).
+`hostnamectl` confirme la distribution (Ubuntu LTS attendue) et le nom du poste. `lscpu` donne le nombre de cœurs et, dans la colonne « Virtualization », la capacité du processeur à héberger des machines virtuelles ; c’est cette capacité que `kvm-ok` vérifie au préambule ([exercice 0.2](#j1-ex-0-2)). `free -h` indique la mémoire réellement allouée à la VM — c’est elle qui décide du scénario (A recommandé à 10 Go, B serré à 6 Go). `df -h /` doit montrer un espace compatible avec le disque virtuel de 60 à 80 Go requis (alloué dynamiquement). `ls -l /dev/kvm` : deux résultats possibles, tous acceptables — périphérique présent (instances rapides) ou message d’erreur (bascule QEMU, instances plus lentes). `ip -br address` fait apparaître les interfaces de la machine hôte ; elles serviront à choisir le mode d’accès à Horizon (host-only recommandé, [lab J1S2](#lab-j1s2--installation-mise-en-service-et-vérification-du-cloud)).
 
 **Exercice 1.2 — Gabarit de la note**
 
-Le gabarit impose huit sections : leur ordre suit la logique de décision (contexte, ressources, trois familles de besoins, sécurité, choix, hypothèses). La section 2 reprend littéralement le relevé de l’exercice 1.1 ; ne rien y réécrire de mémoire.
+Le gabarit impose huit sections : leur ordre suit la logique de décision (contexte, ressources, trois familles de besoins, sécurité, choix, hypothèses). La [section 2](#j1-note-structure) reprend littéralement le relevé de l’[exercice 1.1](#j1-ex-1-1) ; ne rien y réécrire de mémoire.
 
 **Exercice 1.3 — Traduction des besoins**
 
@@ -661,7 +681,7 @@ Exemple de rendu attendu pour le cas présenté :
 | Bancs d’essai | 4 | Selon le test | Ponctuel |
 ```
 
-Le réseau se traduit par « un réseau locataire par direction, isolé des autres, avec groupes de sécurité par défaut bloquant tout » et le stockage par la distinction des trois services vus plus tard : images disque (Glance), volumes persistants (Cinder), documents volumineux (Swift). Le chiffre utile n’est pas la précision absolue : c’est un ordre de grandeur, doublé d’une marge explicite (section 8).
+Le réseau se traduit par « un réseau locataire par direction, isolé des autres, avec groupes de sécurité par défaut bloquant tout » et le stockage par la distinction des trois services vus plus tard : images disque (Glance), volumes persistants (Cinder), documents volumineux (Swift). Le chiffre utile n’est pas la précision absolue : c’est un ordre de grandeur, doublé d’une marge explicite ([section 8](#j1-note-structure)).
 
 **Exercice 1.4 — Choix du modèle**
 
@@ -669,7 +689,7 @@ Attendu pour ce cas : **Cloud privé**, justifié par la sensibilité des donné
 
 **Exercice 1.5 — Auto-contrôle**
 
-`grep -c "^## "` renvoie 8 si les huit sections existent. Un résultat inférieur signale une section oubliée — souvent la section 8 (hypothèses), qui est pourtant celle que le jour 3 réutilisera en premier.
+`grep -c "^## "` renvoie 8 si les huit sections existent. Un résultat inférieur signale une section oubliée — souvent la [section 8 (hypothèses)](#j1-note-structure), qui est pourtant celle que le [jour 3](jour-3.md) réutilisera en premier.
 
 </details>
 
@@ -681,9 +701,9 @@ Attendu pour ce cas : **Cloud privé**, justifié par la sensibilité des donné
 | Identification des acteurs | CIS OpenStack — Gestion des identités | Nommer utilisateurs, équipes et projets avant de construire l’infrastructure |
 | Qualification des données | CIS OpenStack — Vue d’ensemble | Classer les données (sensibles ou non) avant de choisir le stockage |
 | Isolation exprimée comme exigence | CIS OpenStack — Vue d’ensemble | L’isolation entre directions est une exigence, pas une option de dernière minute |
-| Hypothèses explicites | Méthode — cadrage | Toute hypothèse de dimensionnement est écrite et reprise au jour 3 |
+| Hypothèses explicites | Méthode — cadrage | Toute hypothèse de dimensionnement est écrite et reprise au [jour 3](jour-3.md) |
 
-> **Bonnes pratiques** — Conservez `note-besoins-cloud-prive.md` sous version de contrôle (un simple dépôt `git init` dans `~/formation-openstack/` suffit) : au jour 3, les décisions de dimensionnement devront être relues côte à côte avec cette note, et toute divergence devra être justifiée. Une note modifiée sans trace perd sa valeur de référence.
+> **Bonnes pratiques** — Conservez `note-besoins-cloud-prive.md` sous version de contrôle (un simple dépôt `git init` dans `~/formation-openstack/` suffit) : au [jour 3](jour-3.md), les décisions de dimensionnement devront être relues côte à côte avec cette note, et toute divergence devra être justifiée. Une note modifiée sans trace perd sa valeur de référence.
 
 ### Exercice d’approfondissement
 
@@ -720,7 +740,7 @@ Un classement cohérent avec le cas :
 > - Le Cloud est un modèle de service (accès à la demande, mutualisation, élasticité, service mesuré), pas une simple machine virtuelle.
 > - Les modèles de service (IaaS, PaaS, SaaS) et de déploiement (public, privé, hybride, communautaire) sont deux grilles indépendantes à croiser pour qualifier toute offre.
 > - Un Cloud privé apporte la souveraineté et l’isolation, en échange d’une responsabilité totale d’exploitation : c’est un choix à justifier, pas un réflexe.
-> - La note d’analyse des besoins (`note-besoins-cloud-prive.md`) conditionne le dimensionnement du jour 3 : besoin, exigence technique, ressource, commande.
+> - La note d’analyse des besoins (`note-besoins-cloud-prive.md`) conditionne le dimensionnement du [jour 3](jour-3.md) : besoin, exigence technique, ressource, commande.
 > - OpenStack est un ensemble de microservices à API REST, gouverné par l’Open Infrastructure Foundation, publié en deux versions par an ; la branche `stable/2026.1` (Gazpacho) est celle du laboratoire.
 > - Kubernetes n’est pas un concurrent d’OpenStack : il orchestre des conteneurs, là où OpenStack fournit l’infrastructure.
 
@@ -808,20 +828,20 @@ Ordre de démarrage et nature des liens :
 | Bancs d’essai d’applications | Projets isolés, réseaux dédiés, volumes jetables | Essai sans risque pour les services de production |
 | Souveraineté des données sensibles | Cloud privé entier, isolation par projet et par réseau | Données maintenues dans le périmètre de l’administration |
 
-Parcours type d’une demande : l’utilisateur obtient un jeton auprès de Keystone, puis appelle l’API Neutron pour créer le réseau et le sous-réseau, l’API Glance pour sélectionner l’image et l’API Nova pour créer l’instance. Nova interroge Placement pour réserver les vCPU et la mémoire sur l’hôte, télécharge l’image depuis Glance, demande à Neutron de créer et d’attacher un port au réseau, puis démarre la machine virtuelle. Un volume Cinder peut ensuite être attaché à l’instance. Ce parcours est intégralement exécuté au jour 2.
+Parcours type d’une demande : l’utilisateur obtient un jeton auprès de Keystone, puis appelle l’API Neutron pour créer le réseau et le sous-réseau, l’API Glance pour sélectionner l’image et l’API Nova pour créer l’instance. Nova interroge Placement pour réserver les vCPU et la mémoire sur l’hôte, télécharge l’image depuis Glance, demande à Neutron de créer et d’attacher un port au réseau, puis démarre la machine virtuelle. Un volume Cinder peut ensuite être attaché à l’instance. Ce parcours est intégralement exécuté au [jour 2](jour-2.md).
 
 #### 3. Exploration de l’interface d’administration
 
 L’interface **Horizon** expose les mêmes opérations que la ligne de commande, à travers des pages regroupées par ressource. Elle est servie dans le laboratoire par Apache, en HTTP, à l’adresse `http://192.168.56.10/dashboard`.
 
-Points à relever lors de l’exploration (elle sera réalisée en fin de journée dans le lab J1S2, sur le cloud livré déjà en service) :
+Points à relever lors de l’exploration (elle sera réalisée en fin de journée dans le [lab J1S2](#lab-j1s2--installation-mise-en-service-et-vérification-du-cloud), sur le cloud livré déjà en service) :
 
 - L’écran d’ouverture demande un projet, un nom d’utilisateur et un mot de passe : ce sont les trois composantes de l’identité Keystone (le domaine étant explicite dans les déploiements multi-domaines).
 - En haut d’écran, la sélection du projet et le menu de déconnexion rappellent que toutes les ressources affichées appartiennent au projet courant.
 - Les onglets listent les ressources vues en théorie : instances (Nova), réseaux et routeurs (Neutron), images (Glance), volumes (Cinder), projets et utilisateurs (Keystone), ainsi qu’une vue réservée aux administrateurs.
 - Les quotas du projet sont affichés en page d’accueil : c’est l’illustration concrète du « service mesuré » vu le matin.
 
-Le **parcours visuel** ci-dessous sert de carte de navigation pour tout le reste de la formation : chaque commande de la ligne de commande y trouvera son équivalent dans un menu. Il est repris dans les labs des jours 2 et 3.
+Le **parcours visuel** ci-dessous sert de carte de navigation pour tout le reste de la formation : chaque commande de la ligne de commande y trouvera son équivalent dans un menu. Il est repris dans les labs des [jours 2](jour-2.md) et [3](jour-3.md).
 
 | Menu Horizon | Sous-menu | Ressource OpenStack | Service |
 |--------------|-----------|---------------------|---------|
@@ -849,8 +869,8 @@ Le laboratoire tient dans **une machine virtuelle unique**, sur un poste portabl
 
 | Ressource | Configuration | Justification |
 |-----------|---------------|---------------|
-| Mémoire vive | 8 Go attribués à la VM (minimum ; 10-12 Go si l’hôte dispose de 16 Go) | MySQL, RabbitMQ, une dizaine de services Python, OVN, Cinder et deux instances `m1.tiny` cohabitent ; sur 8 Go, prévoir 4 Go de swap et surveiller `free -h` (voir le « Repère pratique » du jour 3) |
-| Processeur | 4 cœurs | Parallélise l’installation et l’exécution des instances |
+| Mémoire vive | 10 Go attribués à la VM sur un hôte 16 Go (6 Go en scénario B ; 12-14 Go si l’hôte dispose de 32 Go) | MySQL, RabbitMQ, une dizaine de services Python, OVN, Cinder et une à deux instances `m1.tiny` cohabitent ; sur 6 Go, prévoir 4 Go de swap et surveiller `free -h` (voir le « Repère pratique » du jour 3) |
+| Processeur | 3 vCPU (4 si l’hôte est dédié) | Parallélise l’installation et l’exécution des instances sans affamer Windows sur un hôte 4c/4T |
 | Disque virtuel | 60 à 80 Go, alloué dynamiquement | Code source et environnements Python : environ 10 Go ; volume LVM de Cinder : 30 Go (fichier creux) ; Swift : 2 Go (6 Go avec `tempest`, activé par défaut) ; marges pour images et journaux |
 | Réseau | 2 adaptateurs : NAT (Internet) + host-only (gestion) | Aucun port entrant public n’est requis |
 | Système | Ubuntu Server 24.04 LTS | Cible validée par DevStack et par les outils de déploiement |
@@ -926,12 +946,13 @@ kvm-ok
 
 | Scénario | Poste hôte | VM (vCPU / RAM / disque) | Services | Instances | Remarques |
 |----------|-----------|--------------------------|----------|-----------|-----------|
-| **A — recommandé** | 16 à 32 Go | 4 / 12-14 Go / 60-80 Go | Complets | 1 à 2 | KVM imbriqué |
+| **A — recommandé** | 16 Go / 4c/4T | 3 / 10 Go / 80 Go | Complets | 1 à 2 | KVM imbriqué ; 4 vCPU/12-14 Go seulement si hôte dédié ou 32 Go |
+| **A+ — confort** | 32 Go ou plus | 4 / 12-14 Go / 80 Go | Complets | 1 à 2 | Marge confortable pour deux instances |
 | **B — serré** | 8 Go | 2 / 6 Go / 60 Go | Minimal (sans `tempest`, sans Swift) | 1 CirrOS `m1.tiny` | Swap de 4 Go ; émulation QEMU si pas de KVM |
-| **C — 16 Go / 2 cœurs** | 16 Go | 2 / 12 Go / 60 Go | Complets | 1 | Installation plus longue, exécution lente |
+| **C — 16 Go / 2 cœurs** | 16 Go / 2c/4T | 2 / 10-12 Go / 60-80 Go | Complets | 1 | Installation plus longue, exécution lente |
 | **D — binôme** | — | 1 VM partagée | Complets | 1 à 2 | Deux apprenants par VM, partage d’écran |
 
-> **Repère mémoire** — Pour ce lab, allouer **4 vCPU et 8 Go de RAM** à la VM `lab-openstack` (minimum). Avec 8 Go, garder peu d’instances en parallèle (`m1.tiny`) et surveiller `free -h` (voir jour 3, « Repère pratique »). Sur un poste de 16 Go ou plus, il est préférable d’allouer 10-12 Go à la VM. `tempest` et Swift peuvent être activés, mais consomment de la mémoire.
+> **Repère mémoire** — Pour ce lab, allouer **3 vCPU et 10 Go de RAM** à la VM `lab-openstack` sur un hôte 16 Go/4c/4T (4 vCPU et 12-14 Go seulement si l’hôte est dédié ou dispose de 32 Go). Avec 10 Go, une à deux instances `m1.tiny` tiennent ; en scénario B (6 Go/2 vCPU), se limiter à une instance et surveiller `free -h` (voir [jour 3](jour-3.md), « Repère pratique »). `tempest` et Swift peuvent être activés, mais consomment de la mémoire.
 
 > **Bonnes pratiques (ressources limitées)** — Mode minimal (scénario B) : ajouter 4 Go de swap, ne pas activer Swift, se limiter à une instance `m1.tiny` et désactiver les services non essentiels (`tempest` pour les tests d’acceptation, `dstat` pour l’agent de métriques) dans `local.conf`. Le binôme (scénario D) est la solution la plus robuste sur des postes à 8 Go : une VM, deux apprenants, aucun compromis sur la configuration.
 
@@ -939,7 +960,7 @@ kvm-ok
 
 **DevStack refuse de s’exécuter en `root`** (administrateur système) : un script d’installation qui tournerait en `root` pourrait, à la moindre erreur, compromettre la machine entière. On travaille donc sur un compte dédié, `stack`, disposant des droits `sudo` sans mot de passe — uniquement pour la durée du laboratoire. Le compte `stack` (mot de passe `lab123`) est créé pendant l’installation Ubuntu, avec son répertoire personnel `/home/stack`. DevStack travaille dans `/opt/stack` : ce répertoire est créé et réservé à `stack` avant le clonage (commandes ci-dessous).
 
-Cette section et les deux suivantes décrivent **comment installer DevStack** sur la VM créée sous Windows + VirtualBox. L’objectif est de savoir lire cette installation, la diagnostiquer et la reproduire sur une machine vierge — compétence directement réutilisée au jour 2 pour la configuration. Vérifier en permanence : accès Horizon depuis Windows (`http://192.168.56.10/dashboard`), et accès Internet de la VM via NAT (`ping 8.8.8.8`). Réseau : NIC1 NAT, NIC2 host-only `192.168.56.10/24`.
+Cette section et les deux suivantes décrivent **comment installer DevStack** sur la VM créée sous Windows + VirtualBox. L’objectif est de savoir lire cette installation, la diagnostiquer et la reproduire sur une machine vierge — compétence directement réutilisée au [jour 2](jour-2.md) pour la configuration. Vérifier en permanence : accès Horizon depuis Windows (`http://192.168.56.10/dashboard`), et accès Internet de la VM via NAT (`ping 8.8.8.8`). Réseau : NIC1 NAT, NIC2 host-only `192.168.56.10/24`.
 
 ```bash
 # Dans la VM : la session doit être ouverte avec le compte de laboratoire
@@ -1065,7 +1086,7 @@ LOGFILE=/opt/stack/logs/stack.sh.log
 enable_service s-proxy s-object s-container s-account
 # Active Swift (stockage d’objets), désactivé par défaut : ses quatre services
 # proxy (API), object, container, account.
-# En mode minimal (scénario B, VM de 8 Go) : commenter cette ligne.
+# En mode minimal (scénario B, VM de 6 Go) : commenter cette ligne.
 
 # --- Mode minimal (scénario B) : décommenter si la mémoire est limitée ---
 # disable_service tempest
@@ -1150,7 +1171,7 @@ Le récapitulatif final de `stack.sh` affiche, en fin d’exécution, l’adress
 
 #### 8. Vérification du cloud
 
-La vérification suit un ordre logique : d’abord l’identité (Keystone répond-il ?), puis le catalogue (les services sont-ils enregistrés ?), puis l’infrastructure (hôtes, agents, images), enfin l’interface. Cette séquence constitue la procédure de recette du cloud livré, rejouée à chaque début de séance aux jours 2 et 3.
+La vérification suit un ordre logique : d’abord l’identité (Keystone répond-il ?), puis le catalogue (les services sont-ils enregistrés ?), puis l’infrastructure (hôtes, agents, images), enfin l’interface. Cette séquence constitue la procédure de recette du cloud livré, rejouée à chaque début de séance aux [jours 2](jour-2.md) et [3](jour-3.md).
 
 ```bash
 # Se placer dans le répertoire DevStack : openrc s’y trouve
@@ -1206,7 +1227,7 @@ curl -I http://192.168.56.10/dashboard/
 #   de la machine hôte : http://192.168.56.10/dashboard
 ```
 
-> **Bon à savoir** — Les unités système de DevStack sont nommées `devstack@<service>` (par exemple `devstack@n-cpu` pour le calcul, `devstack@q-ovn-agent` pour le réseau). Leur statut se lit avec `systemctl` et leurs journaux avec `journalctl` : c’est l’entrée de diagnostic utilisée dès le jour 2.
+> **Bon à savoir** — Les unités système de DevStack sont nommées `devstack@<service>` (par exemple `devstack@n-cpu` pour le calcul, `devstack@q-ovn-agent` pour le réseau). Leur statut se lit avec `systemctl` et leurs journaux avec `journalctl` : c’est l’entrée de diagnostic utilisée dès le [jour 2](jour-2.md).
 
 ### Mapping Sécurité
 
@@ -1223,7 +1244,7 @@ curl -I http://192.168.56.10/dashboard/
 
 | Élément | Valeur |
 |---------|--------|
-| Machine virtuelle | `lab-openstack`, créée par l’apprenant sous Windows + VirtualBox 7.x : Ubuntu Server 24.04.5 LTS, réseau NAT + Host-Only, DevStack `stable/2026.1` — 4 cœurs, 10-12 Go si hôte >= 16 Go (4-6 Go si hôte 8 Go), disque 80 Go conseillé (60 Go minimum). OpenSSH serveur installé. |
+| Machine virtuelle | `lab-openstack`, créée par l’apprenant sous Windows + VirtualBox 7.x : Ubuntu Server 24.04.5 LTS, réseau NAT + Host-Only, DevStack `stable/2026.1` — 3 vCPU (4 si dédié), 10 Go si hôte 16 Go (12-14 Go si hôte 32 Go ; 6 Go si hôte 8 Go, scénario B), disque 80 Go conseillé (60 Go minimum). OpenSSH serveur installé. |
 | Virtualisation imbriquée | `VT-x/AMD-V` activé côté hôte ; `/dev/kvm` vérifié dans la VM (sinon : émulation QEMU, instances lentes) |
 | Réseau | Adaptateur 1 NAT (`10.0.2.15/24`) ; adaptateur 2 host-only (`192.168.56.10/24`) ; aucun port entrant public |
 | Logiciel | DevStack, branche `stable/2026.1` (Gazpacho) |
@@ -1234,11 +1255,13 @@ curl -I http://192.168.56.10/dashboard/
 
 **Replis en cas de ressources limitées (à appliquer avant de commencer) :**
 
-- **VM de 8 Go** : deux instances `m1.tiny` tiennent (1 Go au total) ; si la mémoire manque, désactiver `tempest` puis Swift dans `local.conf`.
+- **VM de 6 Go (scénario B)** : une seule instance `m1.tiny` recommandée (2 vCPU) ; deux (1 Go au total) ne laissent qu’une marge très faible en mémoire et saturent le CPU. Si la mémoire manque, désactiver `tempest` puis Swift dans `local.conf`.
 - **Sans `/dev/kvm`** : poursuivre tel quel (bascule automatique en QEMU), en annonçant les démarrages d’instances lents.
 - **Poste à 2 cœurs ou binôme (scénario C/D)** : prévoir le haut de la plage de durée ; en binôme, une seule session par VM.
 
-Les exercices s’enchaînent : la mise en service (2.1) confirme que les services tournent, la vérification en ligne de commande (2.2) recette le cloud, le parcours visuel (2.3) fait le même contrôle dans Horizon. Le « Parcours 2 » relit ensuite l’installation pour la comprendre. Le cloud vérifié sert sans interruption aux jours 2 et 3.
+Les exercices s’enchaînent : la mise en service ([2.1](#j1-ex-2-1)) confirme que les services tournent, la vérification en ligne de commande ([2.2](#j1-ex-2-2)) recette le cloud, le parcours visuel ([2.3](#j1-ex-2-3)) fait le même contrôle dans Horizon. Le [« Parcours 2 »](#j1-parcours-2) relit ensuite l’installation pour la comprendre. Le cloud vérifié sert sans interruption aux [jours 2](jour-2.md) et [3](jour-3.md).
+
+<a id="j1-ex-2-1"></a>
 
 **Exercice 2.1 — Mise en service et contrôle des services (10 min)**
 
@@ -1261,12 +1284,16 @@ systemctl is-active 'devstack@*'
 - [ ] `systemctl is-active 'devstack@*'` renvoie `active` pour toutes les unités
 - [ ] Aucun service en `failed` (sinon, redémarré et revérifié)
 
+<a id="j1-ex-2-2"></a>
+
 **Exercice 2.2 — Vérification du cloud par la ligne de commande (10 min)**
+
+Cette vérification reprend la [section 8](#8-vérification-du-cloud) de la théorie.
 
 ```bash
 # Se placer dans le répertoire DevStack (openrc s’y trouve)
 cd /opt/stack/devstack
-# Authentification puis chaîne de vérifications (voir la théorie, section 8)
+# Authentification puis chaîne de vérifications
 source openrc admin admin
 # openrc lit local.conf : OS_PASSWORD vaut déjà lab123, aucune saisie
 openstack token issue          # Keystone répond, jeton obtenu
@@ -1289,9 +1316,11 @@ openstack flavor list          # graines, dont m1.tiny
 - [ ] Image et graine `m1.tiny` visibles
 - [ ] Horizon accessible depuis la machine hôte à `http://192.168.56.10/dashboard`, ouverture de session réussie avec `admin` / `lab123`
 
+<a id="j1-ex-2-3"></a>
+
 **Exercice 2.3 — Parcours visuel d’Horizon (10 min)**
 
-Depuis le navigateur de la machine hôte, ouvrir `http://192.168.56.10/dashboard` et se connecter avec `admin` / `lab123` (domaine `Default`, projet `admin`). Parcourir les menus du tableau de bord en suivant la table du parcours visuel (théorie, section 3) et repérer, pour chaque ressource, le menu et le sous-menu correspondants.
+Depuis le navigateur de la machine hôte, ouvrir `http://192.168.56.10/dashboard` et se connecter avec `admin` / `lab123` (domaine `Default`, projet `admin`). Parcourir les menus du tableau de bord en suivant la table du parcours visuel ([théorie, section 3](#3-exploration-de-linterface-dadministration)) et repérer, pour chaque ressource, le menu et le sous-menu correspondants.
 
 ```bash
 # Aucune commande : exercice de navigation dans le navigateur de la machine hôte.
@@ -1306,14 +1335,16 @@ ping -n 4 192.168.56.10
 - [ ] Pour chaque ressource de la table (Instances, Réseaux, Routeurs, Images, Volumes, Conteneurs, Services), le menu et le sous-menu sont identifiés
 - [ ] Quotas du projet relevés en page d’accueil
 
+<a id="j1-parcours-2"></a>
+
 **Parcours 2 — Comprendre l’installation (45 min)**
 
-Le cloud est en service ; reste à comprendre comment il a été construit. Ce parcours relit les sections 5 à 7 pour s’assurer de bien comprendre chaque étape. Observer les fichiers et commandes. Si `stack.sh` n’a pas encore été lancé, le lancer maintenant en tant que `stack` depuis `/opt/stack/devstack`. S’assurer que Horizon est joignable depuis Windows (`http://192.168.56.10/dashboard`) et que la VM a accès à Internet via NAT (`ping 8.8.8.8`). Le journal se trouve dans `/opt/stack/logs/stack.sh.log`. Laisser tourner sans interruption si toujours en cours.
+Le cloud est en service ; reste à comprendre comment il a été construit. Ce parcours relit les [sections 5 à 7](#5-compte-stack-et-clonage-de-devstack) pour s’assurer de bien comprendre chaque étape. Observer les fichiers et commandes. Si `stack.sh` n’a pas encore été lancé, le lancer maintenant en tant que `stack` depuis `/opt/stack/devstack`. S’assurer que Horizon est joignable depuis Windows (`http://192.168.56.10/dashboard`) et que la VM a accès à Internet via NAT (`ping 8.8.8.8`). Le journal se trouve dans `/opt/stack/logs/stack.sh.log`. Laisser tourner sans interruption si toujours en cours.
 
 **Étape 1 — Compte `stack` et droits `sudo` (5 min)**
 
 ```bash
-# Contrôle de l’identité courante : doit être « stack » (voir théorie, section 5)
+# Contrôle de l’identité courante : doit être « stack »
 whoami
 # Si la session n’est pas ouverte avec le compte de laboratoire :
 #   quitter, puis ssh stack@192.168.56.10 depuis la machine hôte
@@ -1372,7 +1403,7 @@ Lire la procédure complète repliée ci-dessous, qui décrit la création du co
 <details>
 <summary>Chemin complet — réinstallation ou installation sur machine vierge</summary>
 
-Sur une VM Ubuntu Server 24.04 LTS vierge (mêmes prérequis : 4 cœurs, 8 Go minimum — 10-12 Go si l’hôte le permet —, 60-80 Go, virtualisation imbriquée), la séquence complète est la suivante.
+Sur une VM Ubuntu Server 24.04 LTS vierge (mêmes prérequis : 3 vCPU — 4 si dédié —, 10 Go sur hôte 16 Go — 6 Go en scénario B, 12-14 Go sur hôte 32 Go —, 80 Go conseillé et 60 Go minimum, virtualisation imbriquée), la séquence complète est la suivante.
 
 **1. Compte `stack` et droits `sudo`** :
 
@@ -1437,7 +1468,7 @@ EOF
 # Terminaison normale : récapitulatif affiché avec l’URL d’Horizon.
 ```
 
-**5. Vérification** : reprendre la chaîne de l’exercice 2.3 (`source openrc admin admin`, puis `openstack token issue`, `service list`, `endpoint list`, `hypervisor list`, `image list`, `flavor list`).
+**5. Vérification** : reprendre la chaîne de l’[exercice 2.3](#j1-ex-2-3) (`source openrc admin admin`, puis `openstack token issue`, `service list`, `endpoint list`, `hypervisor list`, `image list`, `flavor list`).
 
 </details>
 
@@ -1449,7 +1480,7 @@ EOF
 
 ### Vérification pratique
 
-Cette vérification prolonge l’exercice 2.3 : elle se fait seul, en deux temps, sur le cloud installé et mis en service.
+Cette vérification prolonge l’[exercice 2.3](#j1-ex-2-3) : elle se fait seul, en deux temps, sur le cloud installé et mis en service.
 
 **Temps 1 — Lecture du catalogue et du journal (15 min).** Depuis la session `stack`, dans `/opt/stack/devstack` :
 
@@ -1500,7 +1531,7 @@ tail -n 30 /opt/stack/logs/stack.sh.log
 - `openstack endpoint list` : les URL doivent contenir `192.168.56.10` (ou le nom d’hôte associé) ; une URL en `127.0.0.1` signifierait un `HOST_IP` non appliqué.
 - `openstack hypervisor list` : la colonne de type affiche `QEMU` (pilote libvirt) ; l’accélération KVM se contrôle via `/dev/kvm` et la ligne de commande du processus d’instance.
 - `openstack network agent list` : des lignes d’agents OVN sont attendues ; une liste vide alors que `compute service list` est normal indique un souci côté Neutron/OVN.
-- `openstack image list` et `openstack flavor list` : l’image CirrOS et la graine `m1.tiny` sont nécessaires dès le jour 2.
+- `openstack image list` et `openstack flavor list` : l’image CirrOS et la graine `m1.tiny` sont nécessaires dès le [jour 2](jour-2.md).
 - Horizon : depuis la machine hôte, `http://192.168.56.10/dashboard` doit afficher l’écran d’ouverture de session ; `admin` / `lab123` doit ouvrir une session (domaine `Default`, projet `admin`), `demo` / `lab123` celle du projet `demo`. Page blanche : vérifier d’abord la joignabilité du réseau host-only (`ping 192.168.56.10`), puis le service web dans la VM. Refus d’ouverture de session : vérifier `ADMIN_PASSWORD=lab123` dans `local.conf` avant de soupçonner Keystone.
 
 **Exercice 2.3 — Parcours visuel d’Horizon**
@@ -1547,12 +1578,12 @@ Après correction, relancer simplement `./stack.sh` : DevStack reprend la config
 |----------|-----------|-------------|
 | Exécution hors `root` | DevStack (documentation) | `stack.sh` exécuté avec l’utilisateur `stack`, compte dédié et jetable |
 | Mots de passe de service | CIS OpenStack — Keystone (comptes et mots de passe) | Caractères alphanumériques, valeurs propres au laboratoire, jamais réutilisées ailleurs |
-| Exposition d’Horizon | CIS OpenStack — Horizon | Accès uniquement par le réseau host-only ; aucun port entrant public, service en HTTP en lab (TLS : option de durcissement au jour 3) |
+| Exposition d’Horizon | CIS OpenStack — Horizon | Accès uniquement par le réseau host-only ; aucun port entrant public, service en HTTP en lab (TLS : option de durcissement au [jour 3](jour-3.md)) |
 | Configuration centralisée | DevStack (documentation) | Tout réglage passe par `local.conf`, relu à chaque exécution ; aucun fichier généré modifié à la main |
 | Journalisation d’installation | — | `LOGFILE=/opt/stack/logs/stack.sh.log` conservé pour le diagnostic et la reprise |
 | Branche figée | Méthode — reproductibilité | `stable/2026.1` identique sur tous les postes, testée avant la session |
 
-> **Bonnes pratiques** — `source openrc admin admin` est à refaire à chaque nouvelle session de terminal : les variables `OS_*` ne vivent que dans le shell courant. Aucun mot de passe à ressaisir — `openrc` lit `ADMIN_PASSWORD=lab123` dans `local.conf`. La même valeur sert pour Horizon et pour `demo` ; `ENCRYPTION_PASS` s’exporte à chaque session quand la sauvegarde chiffrée en a besoin (jour 3). Ces identifiants restent cantonnés au laboratoire.
+> **Bonnes pratiques** — `source openrc admin admin` est à refaire à chaque nouvelle session de terminal : les variables `OS_*` ne vivent que dans le shell courant. Aucun mot de passe à ressaisir — `openrc` lit `ADMIN_PASSWORD=lab123` dans `local.conf`. La même valeur sert pour Horizon et pour `demo` ; `ENCRYPTION_PASS` s’exporte à chaque session quand la sauvegarde chiffrée en a besoin ([jour 3](jour-3.md)). Ces identifiants restent cantonnés au laboratoire.
 
 ### Exercice d’approfondissement
 
@@ -1607,8 +1638,8 @@ source openrc admin admin && openstack token issue
 
 | Séquence | Thème | Livrable produit | Réutilisé le |
 |----------|-------|------------------|--------------|
-| S1 | Concepts du Cloud privé + présentation d’OpenStack (partie 1) | `note-besoins-cloud-prive.md` | Jour 3 (dimensionnement) |
-| S2 | Carte des services + création VM et installation DevStack | Cloud installé et vérifié + `local.conf` écrit et compris | Jours 2 et 3 (toute la configuration) |
+| S1 | Concepts du Cloud privé + présentation d’OpenStack (partie 1) | `note-besoins-cloud-prive.md` | [Jour 3](jour-3.md) (dimensionnement) |
+| S2 | Carte des services + création VM et installation DevStack | Cloud installé et vérifié + `local.conf` écrit et compris | [Jours 2](jour-2.md) et [3](jour-3.md) (toute la configuration) |
 
 ### Ce que le jour 1 a établi
 
@@ -1629,7 +1660,7 @@ flowchart LR
     L5 --> L6["J3S2 — politique de sécurité et de sauvegarde"]
 ```
 
-**Fig 5** — Chaîne des livrables de la formation : chaque séquence consomme le résultat de la précédente. Les deux livrables du jour 1 sont à conserver intacts : la note alimente le dimensionnement et le cloud accueille toute la configuration.
+**Fig 5** — Chaîne des livrables de la formation : chaque séquence consomme le résultat de la précédente. Les deux livrables du [jour 1](jour-1.md) sont à conserver intacts : la note alimente le dimensionnement et le cloud accueille toute la configuration.
 
 ---
 
@@ -1701,12 +1732,12 @@ ls -l /dev/kvm ; kvm-ok                   # virtualisation imbriquée (kvm-ok : 
 
 | Document | Lien |
 |----------|------|
-| Documentation officielle d’OpenStack | https://docs.openstack.org/ |
-| Dépôts des projets (forge OpenDev) | https://opendev.org/openstack |
-| Documentation de DevStack | https://docs.openstack.org/devstack/ |
-| Guide d’administration d’OpenStack | https://docs.openstack.org/admin/ |
-| Notices de version 2026.1 | https://releases.openstack.org/2026.1/ |
-| Open Infrastructure Foundation | https://www.openinfrastructure.org/ |
-| Référence NIST du Cloud (SP 800-145) | https://csrc.nist.gov/pubs/sp/800/145/final |
-| CIS Benchmarks (dont OpenStack) | https://www.cisecurity.org/benchmarks |
-| Documentation de VirtualBox (virtualisation imbriquée) | https://www.virtualbox.org/manual/ |
+| Documentation officielle d’OpenStack | <https://docs.openstack.org/> |
+| Dépôts des projets (forge OpenDev) | <https://opendev.org/openstack> |
+| Documentation de DevStack | <https://docs.openstack.org/devstack/> |
+| Guide d’administration d’OpenStack | <https://docs.openstack.org/admin/> |
+| Notices de version 2026.1 | <https://releases.openstack.org/gazpacho/> |
+| Open Infrastructure Foundation | <https://openinfra.org/> |
+| Référence NIST du Cloud (SP 800-145) | <https://csrc.nist.gov/pubs/sp/800/145/final> |
+| CIS Benchmarks (dont OpenStack) | <https://www.cisecurity.org/benchmarks> |
+| Documentation de VirtualBox (virtualisation imbriquée) | <https://www.virtualbox.org/manual/> |

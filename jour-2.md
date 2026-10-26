@@ -2,13 +2,13 @@
 
 ## Configuration avancée des services OpenStack (3 h) + Administration et surveillance du Cloud privé (3 h) — 27/10/2026
 
-**Fil conducteur :** Le matin, on configure les services OpenStack sur le cloud DevStack installé au jour 1 (`stable/2026.1`) : projets, réseaux, images, graines, instance — objets réutilisés au jour 3. L’après-midi, on met en place l’administration et la surveillance (journaux, mesures, dépannage, maintenance), afin que l’environnement soit exploitable et traçable. Deux séquences, sans rupture avec le jour 1, qui alimentent directement le jour 3.
+**Fil conducteur :** Le matin, on configure les services OpenStack sur le cloud DevStack installé au [jour 1](jour-1.md) (`stable/2026.1`) : projets, réseaux, images, graines, instance — objets réutilisés au [jour 3](jour-3.md). L’après-midi, on met en place l’administration et la surveillance (journaux, mesures, dépannage, maintenance), afin que l’environnement soit exploitable et traçable. Deux séquences, sans rupture avec le jour 1, qui alimentent directement le jour 3.
 
 ---
 
 ## Objectifs du Jour
 
-- Vérifier l’état du cloud DevStack du jour 1 (jeton, catalogue, hyperviseur, agents OVN) et réutiliser `local.conf` et `openrc`.
+- Vérifier l’état du cloud DevStack du [jour 1](jour-1.md) (jeton, catalogue, hyperviseur, agents OVN) et réutiliser `local.conf` et `openrc`.
 - Maîtriser la configuration avancée de Keystone (domaines, projets, utilisateurs, rôles, RBAC) : isolation multi-projet, moindre privilège.
 - Configurer Neutron en profondeur (réseaux, sous-réseaux, ports, routeurs, adresses flottantes, groupes de sécurité) en tenant compte d’OVN et des plages imposées.
 - Approfondir Nova (graines, images, paires de clés, cycle de vie des instances, redimensionnement) et corréler ligne de commande et Horizon.
@@ -25,7 +25,7 @@
 | S1 | 09h30-10h15 | Keystone : domaines, projets, utilisateurs, rôles, RBAC, isolation multi-projet | 45 min |
 | S1 | 10h15-11h00 | Neutron : réseaux, sous-réseaux, routeurs, adresses flottantes, groupes de sécurité, OVN | 45 min |
 | S1 | 11h00-11h30 | Nova : graines, images, paires de clés, cycle de vie des instances | 30 min |
-| S1 | 11h30-12h00 | Horizon : corrélation interface/ligne de commande, consolidation du lab J2S1 | 30 min |
+| S1 | 11h30-12h00 | Horizon : corrélation interface/ligne de commande, consolidation du [lab J2S1](#lab-j2s1--configuration-avancée-des-services-09h00-12h00) | 30 min |
 | — | 12h00-13h00 | Pause déjeuner (unique) | 1 h |
 | S2 | 13h00-13h45 | Surveillance des performances : mesures, hyperviseur, quotas, usages | 45 min |
 | S2 | 13h45-14h30 | Journaux : `journalctl`, `/var/log`, unités `devstack@*` | 45 min |
@@ -48,7 +48,7 @@
 
 #### 1. Vérification du cloud en début de séance
 
-Le cloud DevStack du jour 1 (branche `stable/2026.1`) doit être revérifié avant toute configuration. L’environnement d’authentification vient du fichier `openrc` livré avec DevStack : exécuté dans le shell courant, il positionne les variables `OS_*` (authentification, projet, adresse du catalogue) et accepte deux arguments, l’utilisateur puis le projet (`source openrc <utilisateur> <projet>`).
+Le cloud DevStack du [jour 1](jour-1.md) (branche `stable/2026.1`) doit être revérifié avant toute configuration. L’environnement d’authentification vient du fichier `openrc` livré avec DevStack : exécuté dans le shell courant, il positionne les variables `OS_*` (authentification, projet, adresse du catalogue) et accepte deux arguments, l’utilisateur puis le projet (`source openrc <utilisateur> <projet>`).
 
 > **Concept clé** — Tout passe par Keystone. Un jeton valide et un catalogue à jour sont les prérequis à toute opération sur Nova, Neutron, Glance ou Cinder. Une commande `openstack` qui échoue « sans raison apparente » est presque toujours un environnement d’authentification non chargé.
 
@@ -136,7 +136,7 @@ Neutron fournit les services réseau du cloud. Dans DevStack `stable/2026.1`, le
 | Adresse flottante (*floating IP*) | Adresse du réseau externe associée temporairement à un port d’instance pour la rendre accessible de l’extérieur. | Adresse 172.24.4.x rattachée à l’instance. |
 | Groupe de sécurité (*security group*) | Pare-feu virtuel appliqué aux ports d’instance (règles entrantes et sortantes, par défaut tout est bloqué à l’entrée). | `demo-sg` : autorise SSH (22/tcp) et écho (ICMP). |
 
-Les plages d’adresses sont celles imposées au jour 1 : `192.168.56.0/24` réservé à la gestion (host-only), `172.24.4.0/24` pour le réseau externe, `192.168.100.0/24` pour les réseaux locataires, `10.0.2.0/24` interdit (réseau NAT de VirtualBox).
+Les plages d’adresses sont celles imposées au [jour 1](jour-1.md) : `192.168.56.0/24` réservé à la gestion (host-only), `172.24.4.0/24` pour le réseau externe, `192.168.100.0/24` pour les réseaux locataires, `10.0.2.0/24` interdit (réseau NAT de VirtualBox).
 
 > **Bon à savoir (topologie préexistante)** — DevStack crée par défaut, dans le projet `demo`, un réseau `private` et un routeur `router1` sur la plage `192.168.100.0/26`. Le lab construit sa propre topologie `demo-net` : il retire d’abord ces objets. Neutron autorise deux sous-réseaux qui se chevauchent (`allow_overlapping_ips` vaut `True` depuis Yoga), mais ce chevauchement rend le diagnostic ambigu.
 
@@ -322,7 +322,7 @@ Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contr
 
 | Élément | Valeur |
 |---------|--------|
-| Machine virtuelle | VM `lab-openstack` créée sous Windows + VirtualBox (Ubuntu Server 24.04.5 LTS, 4 cœurs, 10-12 Go si l’hôte a 16 Go ou plus, 4-6 Go si l’hôte a 8 Go, virtualisation imbriquée, réseau host-only 192.168.56.0/24) |
+| Machine virtuelle | VM `lab-openstack` créée sous Windows + VirtualBox (Ubuntu Server 24.04.5 LTS, 3 vCPU — 4 si dédié —, 10 Go si l’hôte a 16 Go, 12-14 Go si l’hôte a 32 Go ou plus, 6 Go si l’hôte a 8 Go (scénario B), virtualisation imbriquée, réseau host-only 192.168.56.0/24) |
 | Cloud | DevStack `stable/2026.1`, opérationnel et vérifié en fin de journée 1 |
 | Utilisateur | `stack` (session en cours) ; environnement `source openrc admin admin` |
 | Identifiants | `admin` / `lab123`, `demo` / `lab123` — valeur utilisée dans ce laboratoire |
@@ -330,7 +330,9 @@ Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contr
 | Livrables | Projet `demo`, utilisateur `demo-user`, réseau `demo-net` + routeur `demo-router` + groupe `demo-sg`, instance `demo-instance` joignable par adresse flottante |
 | Durée | 3 h (09h00-12h00) |
 
-Les exercices s’enchaînent : chacun prépare le suivant, et le lab s’achève sur une topologie complète et vérifiée, consommée au jour 3.
+Les exercices s’enchaînent : chacun prépare le suivant, et le lab s’achève sur une topologie complète et vérifiée, consommée au [jour 3](jour-3.md).
+
+<a id="j2-ex-1-1"></a>
 
 **Exercice 1.1 — Vérification du cloud (09h00-09h30, 30 min)**
 
@@ -368,6 +370,8 @@ openstack image list && openstack flavor list
 - [ ] Hyperviseur, services Nova et agents OVN en état normal
 - [ ] Image CirrOS et graine `m1.tiny` visibles
 
+<a id="j2-ex-1-2"></a>
+
 **Exercice 1.2 — Keystone : projet, utilisateur, rôle (09h30-10h15, 45 min)**
 
 ```bash
@@ -392,6 +396,8 @@ openstack user show demo-user
 - [ ] Utilisateur `demo-user` créé et rattaché à `demo` (mot de passe alphanumérique noté)
 - [ ] Rôle `member` attribué et vérifié par `role assignment list`
 - [ ] Correspondance Horizon vérifiée : Identité → Projets et Utilisateurs
+
+<a id="j2-ex-1-3"></a>
 
 **Exercice 1.3 — Neutron : topologie réseau complète (10h15-11h00, 45 min)**
 
@@ -434,6 +440,8 @@ openstack security group rule create --proto icmp demo-sg
 - [ ] Contrôles : `openstack network list`, `router show demo-router`, `floating ip list`
 - [ ] Correspondance Horizon vérifiée : Projet → Réseau → Réseaux, Routeurs, Topologie, Groupes de sécurité, Adresses flottantes
 
+<a id="j2-ex-1-4"></a>
+
 **Exercice 1.4 — Nova : instance joignable (11h00-11h30, 30 min)**
 
 ```bash
@@ -469,6 +477,8 @@ openstack server show demo-instance
 - [ ] Instance `demo-instance` créée puis état `ACTIVE`
 - [ ] Adresse flottante associée et visible dans `server show`
 - [ ] Correspondance Horizon vérifiée : Projet → Calcul → Instances et Paires de clés
+
+<a id="j2-ex-1-5"></a>
 
 **Exercice 1.5 — Consolidation Horizon, console et accès (11h30-12h00, 30 min)**
 
@@ -575,11 +585,11 @@ DevStack a déjà créé le projet `demo` (ainsi qu’un utilisateur `demo`) pou
 - Le passage à `ACTIVE` prend quelques secondes en KVM imbriqué, plusieurs minutes en émulation QEMU (scénario sans `/dev/kvm`) : ne pas conclure trop vite à un échec.
 - `openstack server show demo-instance` : la section `addresses` doit contenir le réseau `demo-net` avec l’adresse 192.168.100.x et l’adresse flottante associée.
 - Échec fréquent d’association d’adresse flottante : adresse déjà associée à une autre instance, ou plus d’adresse libre dans `public` (alors libérer une adresse inutilisée, cf. S2).
-- En cas d’erreur de connexion SSH : d’abord vérifier la règle TCP/22 du groupe `demo-sg`, puis l’association de l’adresse flottante, puis ouvrir la console web (exercice 1.5) pour diagnostiquer depuis l’intérieur.
+- En cas d’erreur de connexion SSH : d’abord vérifier la règle TCP/22 du groupe `demo-sg`, puis l’association de l’adresse flottante, puis ouvrir la console web ([exercice 1.5](#j2-ex-1-5)) pour diagnostiquer depuis l’intérieur.
 
 **Exercice 1.5 — Consolidation**
 
-La console web (`--novnc`) est servie par le service `n-novnc` et joignable depuis la machine hôte via l’URL affichée (qui intègre l’adresse `192.168.56.10`). La connexion SSH avec l’utilisateur `cirros` (et non `ubuntu` ni `admin`) doit aboutir à l’invite CirrOS. Le recensement final s’exécute après un retour en contexte administrateur (`source openrc admin admin`) : les filtres `--project` et la vue multi-projets exigent ce rôle. Le recensement sert de contrat : ces objets (projet `demo`, réseau `demo-net`, graine `m1.tiny`, image CirrOS, instance `demo-instance`) sont consommés au jour 3 pour le déploiement du scénario complet.
+La console web (`--novnc`) est servie par le service `n-novnc` et joignable depuis la machine hôte via l’URL affichée (qui intègre l’adresse `192.168.56.10`). La connexion SSH avec l’utilisateur `cirros` (et non `ubuntu` ni `admin`) doit aboutir à l’invite CirrOS. Le recensement final s’exécute après un retour en contexte administrateur (`source openrc admin admin`) : les filtres `--project` et la vue multi-projets exigent ce rôle. Le recensement sert de contrat : ces objets (projet `demo`, réseau `demo-net`, graine `m1.tiny`, image CirrOS, instance `demo-instance`) sont consommés au [jour 3](jour-3.md) pour le déploiement du scénario complet.
 
 </details>
 
@@ -595,7 +605,7 @@ La console web (`--novnc`) est servie par le service `n-novnc` et joignable depu
 | Plages d’adresses imposées | Méthode — cadrage lab | 192.168.100.0/24 pour les locataires, hors des plages NAT et host-only. |
 | Traçabilité des opérations | Méthode — exploitation | Chaque opération effectuée en ligne de commande, avec drapeaux commentés, puis vérifiée dans Horizon. |
 
-> **Bonnes pratiques** — Conservez une trace des objets créés dans S1 (noms, adresses, commandes) : le jour 3 les reprendra pour déployer le scénario complet. Une ligne de commande documentée dans un fichier d’exploitation vaut mieux qu’une succession de clics dans l’interface, qu’on ne peut pas relire ni rejouer.
+> **Bonnes pratiques** — Conservez une trace des objets créés dans S1 (noms, adresses, commandes) : le [jour 3](jour-3.md) les reprendra pour déployer le scénario complet. Une ligne de commande documentée dans un fichier d’exploitation vaut mieux qu’une succession de clics dans l’interface, qu’on ne peut pas relire ni rejouer.
 
 ### Exercices
 
@@ -681,25 +691,25 @@ Compromis pragmatique : pour autoriser à la fois le SSH direct (réseau interne
 - Obtenir une vue d’exploitation minimale et réaliste (mesures système, hyperviseur, quotas, usages) sans alourdir la VM.
 - Lire et interpréter les journaux (`journalctl -u devstack@*`, `/var/log`, `/opt/stack/logs`).
 - Appliquer l’arbre de décision aux cas courants (service arrêté, jeton invalide, pool d’adresses flottantes épuisé, instance en échec), en tenant compte d’OVN.
-- Connaître `unstack.sh`, `stack.sh` et la sauvegarde de configuration. **Ne pas exécuter `unstack.sh` en fin de journée** : le cloud doit rester fonctionnel pour le jour 3. N’utiliser `unstack.sh` qu’en cas de réinitialisation explicite.
-- Produire un tableau de bord de surveillance minimal, traçable, réutilisable au jour 3.
+- Connaître `unstack.sh`, `stack.sh` et la sauvegarde de configuration. **Ne pas exécuter `unstack.sh` en fin de journée** : le cloud doit rester fonctionnel pour le [jour 3](jour-3.md). N’utiliser `unstack.sh` qu’en cas de réinitialisation explicite.
+- Produire un tableau de bord de surveillance minimal, traçable, réutilisable au [jour 3](jour-3.md).
 
 ### Contenu Théorique
 
 #### 1. Surveillance des performances : mesures, hyperviseur, quotas, usages
 
-L’après-midi vise une vue d’exploitation minimale mais utile, adaptée à la VM `lab-openstack` créée par l’apprenant sous Windows + VirtualBox (8 Go attribués, 16 Go recommandés sur un poste plus large). La pile complète de supervision (serveur de mesures, base de séries temporelles, tableau de bord graphique) est écartée : elle dépasserait les ressources disponibles et ajouterait peu. La piste retenue combine commandes système natives, consultation des quotas OpenStack et script de collecte léger : aucun port réseau supplémentaire n’est requis, et chaque mesure reste compréhensible.
+L’après-midi vise une vue d’exploitation minimale mais utile, adaptée à la VM `lab-openstack` créée par l’apprenant sous Windows + VirtualBox (10 Go attribués sur un hôte 16 Go ; 6 Go en scénario B ; 12-14 Go sur un hôte 32 Go ou plus). La pile complète de supervision (serveur de mesures, base de séries temporelles, tableau de bord graphique) est écartée : elle dépasserait les ressources disponibles et ajouterait peu. La piste retenue combine commandes système natives, consultation des quotas OpenStack et script de collecte léger : aucun port réseau supplémentaire n’est requis, et chaque mesure reste compréhensible.
 
 | Indicateur | Commande | Seuil d’alerte dans le lab | Action associée |
 |------------|----------|----------------------------|-----------------|
 | Mémoire | `free -h` | moins de 500 Mo libres | Réduire le nombre d’instances, vérifier les arrêts par manque de mémoire (`dmesg`), appliquer le mode minimal. |
 | Charge processeur | `uptime` | charge supérieure au nombre de cœurs (4) sur plusieurs minutes | Identifier le processus consommateur (`top`), limiter les redimensionnements. |
 | Disque | `df -h /` | moins de 10 Go libres | Purger les journaux anciens, éviter la création massive de volumes (fichier de boucle de Cinder, 30 Go). |
-| Hyperviseur | `openstack hypervisor stats show` | vCPU ou mémoire planifiables presque épuisés | Ajuster les graines et les quotas, planifier l’ajout d’un nœud de calcul (jour 3). |
+| Hyperviseur | `openstack hypervisor stats show` | vCPU ou mémoire planifiables presque épuisés | Ajuster les graines et les quotas, planifier l’ajout d’un nœud de calcul ([jour 3](jour-3.md)). |
 | Services de calcul | `openstack compute service list` | état `down` ou `disabled` | Vérifier l’unité `devstack@n-cpu`, consulter son journal, redémarrer. |
 | Agents réseau | `openstack network agent list` | agent `down` | Vérifier les unités OVN, consulter les journaux réseau. |
 | Quotas projet | `openstack quota show demo` | usage proche de la limite | Libérer des ressources ou faire ajuster le quota par l’administrateur. |
-| Instances | `openstack server list --all-projects` | état `ERROR` ou `SHUTOFF` inattendu | Diagnostiquer par la console et les journaux (arbre de décision, section 3). |
+| Instances | `openstack server list --all-projects` | état `ERROR` ou `SHUTOFF` inattendu | Diagnostiquer par la console et les journaux ([arbre de décision, section 3](#3-dépannage--cas-courants-agents-ovn-arbre-de-décision)). |
 
 > **Pourquoi surveiller les quotas autant que la machine ?** — Un cloud peut paraître sain côté système (mémoire et processeur largement libres) et pourtant bloquer les utilisateurs : quotas de projet épuisés (plus d’instances autorisées, plus d’adresses flottantes disponibles) ou capacité d’hyperviseur atteinte. Les deux plans de surveillance sont complémentaires et se consultent dans le même réflexe.
 
@@ -708,7 +718,7 @@ L’après-midi vise une vue d’exploitation minimale mais utile, adaptée à l
 free -h
 # -h : unités lisibles ; surveiller la colonne « available » (sous 500 Mo : alerte)
 uptime
-# affiche la charge moyenne sur 1, 5 et 15 minutes, à comparer aux 4 cœurs
+# affiche la charge moyenne sur 1, 5 et 15 minutes, à comparer aux 3 vCPU (4 si dédié)
 df -h /
 # espace libre sur la partition racine (fichier de boucle Cinder : 30 Go)
 top -b -n1 | head -15
@@ -728,7 +738,7 @@ openstack server list --project demo
 openstack floating ip list --project demo
 ```
 
-> **Bon à savoir** — `dstat` est installé par DevStack par défaut (désactivable en mode minimal au jour 1). Quand il est présent, `dstat -cdngy 2 5` fournit un aperçu temps réel — processeur, disque, pagination, réseau et statistiques système — cinq fois à deux secondes d’intervalle. Le mode complet `dstat -a` ajoute en plus la mémoire, le swap et l’usage des systèmes de fichiers. S’il a été désactivé, les commandes ci-dessus suffisent : aucune dépendance externe n’est requise.
+> **Bon à savoir** — `dstat` est installé par DevStack par défaut (désactivable en mode minimal au [jour 1](jour-1.md)). Quand il est présent, `dstat -cdngy 2 5` fournit un aperçu temps réel — processeur, disque, pagination, réseau et statistiques système — cinq fois à deux secondes d’intervalle. Le mode complet `dstat -a` ajoute en plus la mémoire, le swap et l’usage des systèmes de fichiers. S’il a été désactivé, les commandes ci-dessus suffisent : aucune dépendance externe n’est requise.
 
 #### 2. Journaux : `journalctl`, répertoires `/var/log`, unités `devstack@*`
 
@@ -867,7 +877,7 @@ tar czf ~/logs-bak.$STAMP.tar.gz /opt/stack/logs 2>/dev/null || true
 4. Arrêter proprement : `cd /opt/stack/devstack && ./unstack.sh` et attendre la fin.
 5. Appliquer la modification dans `local.conf` si nécessaire (seul fichier relu à chaque exécution).
 6. Relancer : `./stack.sh` (30 à 90 min selon le poste) — les données sont recréées.
-7. Recharger l’environnement et rejouer la chaîne de vérification (exercice 1.1 du matin).
+7. Recharger l’environnement et rejouer la chaîne de vérification ([exercice 1.1 du matin](#j2-ex-1-1)).
 
 **Mises à jour DevStack.** Mettre à jour consiste à synchroniser la branche stable figée puis à relancer l’installation. La règle du laboratoire reste valable : aucune bascule sur `master`, aucune migration vers `stable/2026.2` (trop récente) pendant la session.
 
@@ -891,11 +901,11 @@ git pull origin stable/2026.1
 
 #### 5. Pile de supervision légère : choix et justification
 
-Plusieurs options se présentent pour outiller la surveillance, et le choix doit rester compatible avec la VM du laboratoire (8 Go attribués, 16 Go recommandés sur un poste plus large) qui exécute déjà l’ensemble d’OpenStack :
+Plusieurs options se présentent pour outiller la surveillance, et le choix doit rester compatible avec la VM du laboratoire (10 Go attribués sur un hôte 16 Go ; 6 Go en scénario B) qui exécute déjà l’ensemble d’OpenStack :
 
 | Option | Principe | Verdict dans ce lab |
 |--------|----------|---------------------|
-| **Script de collecte + tableau de bord texte** (retenu) | Un script interroge les commandes clés à intervalle régulier et consigne les résultats dans un fichier horodaté | Aucun service supplémentaire, aucun port ouvert, réutilisable au jour 3 |
+| **Script de collecte + tableau de bord texte** (retenu) | Un script interroge les commandes clés à intervalle régulier et consigne les résultats dans un fichier horodaté | Aucun service supplémentaire, aucun port ouvert, réutilisable au [jour 3](jour-3.md) |
 | Telegraf + InfluxDB + Grafana | Agent de collecte, base de mesures, tableaux de bord graphiques | Écriture attractive, mais trois services supplémentaires (150 à 300 Mo de mémoire et de disque) : disproportionné pour un usage ponctuel et fragile sur un poste serré |
 | `dstat` + journal système | Collecte native existante | Excellent en appoint (et déjà présent), mais ne conserve pas d’historique exploitable après la séance |
 | Prometheus + exporteur OpenStack | Supervision orientée alertes | Modèle de production, trop lourd et sans alerte utile à configurer en 45 min |
@@ -962,6 +972,8 @@ chmod +x ~/formation-openstack/check-cloud.sh
 | Livrables | Tableau de bord `~/formation-openstack/surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées |
 | Durée | 3 h (13h00-16h00) |
 
+<a id="j2-ex-2-1"></a>
+
 **Exercice 2.1 — Relevé de performance et d’usage (13h00-13h45, 45 min)**
 
 ```bash
@@ -991,9 +1003,13 @@ dstat -cdngy 2 5
 - [ ] Capacité d’hyperviseur relevée (`vcpus_used`, `memory_mb_used`, `running_vms`)
 - [ ] Quotas du projet `demo` consultés et usages rapprochés
 - [ ] État des services Nova et des agents OVN consigné
-- [ ] Résultats consignés dans les sections 2 à 4 du tableau de bord (exercice 2.4)
+- [ ] Résultats consignés dans les [sections 2 à 4 du tableau de bord](#j2-tableau-bord) ([exercice 2.4](#j2-ex-2-4))
+
+<a id="j2-ex-2-2"></a>
 
 **Exercice 2.2 — Lecture des journaux (13h45-14h30, 45 min)**
+
+Cette lecture applique la [section 2](#2-journaux--journalctl-répertoires-varlog-unités-devstack) de la théorie.
 
 ```bash
 # 1. Démarrage récent d’un service API
@@ -1002,7 +1018,7 @@ sudo journalctl -u devstack@n-api -n 20
 
 # 2. Erreurs récentes sur l’ensemble des services
 sudo journalctl --since -30m | grep -iE "error|traceback"
-# filtre textuel : plus fiable que --priority, voir la section 4
+# filtre textuel : plus fiable que --priority
 
 # 3. Journaux détaillés applicatifs (journald)
 sudo journalctl -u devstack@n-api -n 25 --no-pager
@@ -1023,7 +1039,9 @@ sudo tail -n 15 /var/log/apache2/horizon_error.log
 - [ ] Journaux applicatifs des API Nova et Neutron consultés via `journalctl`
 - [ ] Journaux OVN consultés (nord et contrôleur)
 - [ ] Vérifications système (mémoire, Horizon) effectuées
-- [ ] Deux lignes significatives reformulées dans la section 5 du tableau de bord
+- [ ] Deux lignes significatives reformulées dans la [section 5 du tableau de bord](#j2-tableau-bord)
+
+<a id="j2-ex-2-3"></a>
 
 **Exercice 2.3 — Dépannage dirigé (14h30-15h15, 45 min)**
 
@@ -1119,23 +1137,29 @@ ping -c 3 8.8.8.8
 - [ ] Sortie Internet testée depuis l’instance (ping vers 8.8.8.8)
 - [ ] Parcours réseau complet (instance → routeur → réseau externe → NAT) verbalisé
 
+<a id="j2-ex-2-4"></a>
+
 **Exercice 2.4 — Sauvegarde, tableau de bord et maintenance (15h15-16h00, 45 min)**
 
+Cet exercice reprend la [section 4](#4-maintenance-mises-à-jour-et-sauvegarde-de-configuration) (sauvegardes) et la [section 5](#5-pile-de-supervision-légère--choix-et-justification) (script de collecte) de la théorie.
+
 ```bash
-# 1. Sauvegardes horodatées (voir la théorie, section 4)
+# 1. Sauvegardes horodatées
 STAMP=$(date +%Y%m%d-%H%M%S)
 cp /opt/stack/devstack/local.conf /opt/stack/devstack/local.conf.bak.$STAMP
 cp /opt/stack/devstack/openrc /opt/stack/devstack/openrc.bak.$STAMP
 cp -a ~/.ssh ~/ssh-bak.$STAMP
 
-# 2. Création du script de collecte (voir la théorie, section 5)
+# 2. Création du script de collecte
 mkdir -p ~/formation-openstack
-# ... écriture de check-cloud.sh d’après le modèle de la section 5 ...
+# ... écriture de check-cloud.sh ...
 
 # 3. Exécution du script et lecture du résultat
 ~/formation-openstack/check-cloud.sh
 ls -l ~/formation-openstack/etat-cloud-*.txt
 ```
+
+<a id="j2-tableau-bord"></a>
 
 Ensuite, rédiger le tableau de bord `~/formation-openstack/surveillance-cloud.md` selon la structure imposée :
 
@@ -1165,7 +1189,7 @@ Ensuite, rédiger le tableau de bord `~/formation-openstack/surveillance-cloud.m
 - Interventions réalisées et vérifications associées
 ```
 
-Enfin, le redémarrage contrôlé : **à ne pas exécuter en fin de journée**. Le cloud doit rester actif pour le jour 3. Décrire la procédure pas à pas (commandes, durée, contrôles) dans le tableau de bord et l’exécuter seulement si un créneau le permet, après un instantané de machine. `./unstack.sh` arrête proprement les services sans détruire les données (projet `demo` et `demo-instance` subsistent). `./stack.sh` relance l’installation mais repart d’un état réinitialisé : les données peuvent être perdues (la relance dure 30 à 90 min). Ne jamais laisser le cloud arrêté à la fin du jour 2.
+Enfin, le redémarrage contrôlé : **à ne pas exécuter en fin de journée**. Le cloud doit rester actif pour le [jour 3](jour-3.md). Décrire la procédure pas à pas (commandes, durée, contrôles) dans le tableau de bord et l’exécuter seulement si un créneau le permet, après un instantané de machine. `./unstack.sh` arrête proprement les services sans détruire les données (projet `demo` et `demo-instance` subsistent). `./stack.sh` relance l’installation mais repart d’un état réinitialisé : les données peuvent être perdues (la relance dure 30 à 90 min). Ne jamais laisser le cloud arrêté à la fin du jour 2.
 
 ```bash
 cd /opt/stack/devstack
@@ -1188,14 +1212,14 @@ openstack server list --project demo
 
 - [ ] Sauvegardes horodatées de `local.conf`, `openrc` et `~/.ssh` présentes
 - [ ] Script `check-cloud.sh` créé, exécuté et fichier `etat-cloud-*.txt` produit
-- [ ] Tableau de bord `surveillance-cloud.md` complet (sections 1 à 6, valeurs réelles)
+- [ ] Tableau de bord `surveillance-cloud.md` complet ([sections 1 à 6](#j2-tableau-bord), valeurs réelles)
 - [ ] `unstack.sh` exécuté ou procédure de redémarrage décrite et validée
 - [ ] Re-vérification post-maintenance : jeton, services, agents rétablis ; instance `demo` présente après `unstack.sh` seul, ou liste vide assumée après `stack.sh`
 - [ ] Démarche de dépannage reformulée en trois étapes dans le tableau de bord
 
 ### Vérification pratique
 
-Contrôle de synthèse à exécuter seul en clôture de S2 (environ 15 min). Si la relance `stack.sh` de l’exercice 2.4 n’a pas eu lieu (créneau insuffisant), n’exécuter que les étapes 2 et 3, qui ne dépendent pas des services OpenStack.
+Contrôle de synthèse à exécuter seul en clôture de S2 (environ 15 min). Si la relance `stack.sh` de l’[exercice 2.4](#j2-ex-2-4) n’a pas eu lieu (créneau insuffisant), n’exécuter que les étapes 2 et 3, qui ne dépendent pas des services OpenStack.
 
 1. **Journal d’un service et journaux OVN** — les traces applicatives et les journaux réseau vivent à deux endroits distincts :
 
@@ -1225,7 +1249,7 @@ ls -l /var/log/ovn/
 
 **Exercice 2.1 — Relevé de performance**
 
-`free -h` : la colonne « available » (et non « free ») est la mémoire réellement mobilisable ; sous 500 Mo, le risque d’arrêt par manque de mémoire devient sérieux sur une VM à 8 Go (d’autant plus tôt sur un poste hôte serré). `uptime` : la charge doit rester sous 4 (nombre de cœurs) ; une charge soutenue au-dessus signale un processus monopolisant le processeur. `openstack hypervisor stats show` : comparer `vcpus_used` à `vcpus` et `memory_mb_used` à `memory_mb` donne la capacité réellement disponible pour de nouvelles instances — c’est la donnée que le jour 3 utilisera pour le dimensionnement. `openstack quota show demo` montre les plafonds (instances, vCPU, mémoire, adresses flottantes) ; rapprocher ces plafonds des usages réels (`server list`, `floating ip list`) révèle un quota proche de la limite avant qu’il ne bloque les utilisateurs.
+`free -h` : la colonne « available » (et non « free ») est la mémoire réellement mobilisable ; sous 1 Go, le risque d’arrêt par manque de mémoire devient sérieux sur une VM à 10 Go (500 Mo à 1 Go de marge en scénario B à 6 Go). `uptime` : la charge doit rester sous 3 (nombre de vCPU ; 4 si dédié) ; une charge soutenue au-dessus signale un processus monopolisant le processeur. `openstack hypervisor stats show` : comparer `vcpus_used` à `vcpus` et `memory_mb_used` à `memory_mb` donne la capacité réellement disponible pour de nouvelles instances — c’est la donnée que le [jour 3](jour-3.md) utilisera pour le dimensionnement. `openstack quota show demo` montre les plafonds (instances, vCPU, mémoire, adresses flottantes) ; rapprocher ces plafonds des usages réels (`server list`, `floating ip list`) révèle un quota proche de la limite avant qu’il ne bloque les utilisateurs.
 
 **Exercice 2.2 — Journaux**
 
@@ -1240,7 +1264,7 @@ ls -l /var/log/ovn/
 
 **Exercice 2.4 — Sauvegarde et tableau de bord**
 
-Les sauvegardes doivent exister avec leur suffixe horodaté (`local.conf.bak.<date>`, `openrc.bak.<date>`, `ssh-bak.<date>`) : un nom sans horodatage s’écrase à la sauvegarde suivante. Le script `check-cloud.sh` doit s’exécuter sans erreur et produire un fichier `etat-cloud-<date>.txt` contenant les mêmes données que l’exercice 2.1. Le tableau de bord est validé s’il contient des **valeurs réelles** dans toutes ses sections (et non des cases cochées sans chiffres). Concernant le redémarrage : après `unstack.sh` seul, les services sont arrêtés mais le projet `demo`, ses réseaux et `demo-instance` subsistent dans les bases — c’est ce que l’exercice vérifie. Attention : la relance `stack.sh` **supprime et recrée les bases**, le cloud repart vide ; d’où l’instantané préalable. `clean.sh`, lui, efface tous les fichiers générés et n’a pas sa place dans cette séquence. En cas de créneau insuffisant pour `stack.sh`, la procédure décrite (commandes, durée, contrôles) vaut exécution, à condition d’être écrite dans le tableau de bord.
+Les sauvegardes doivent exister avec leur suffixe horodaté (`local.conf.bak.<date>`, `openrc.bak.<date>`, `ssh-bak.<date>`) : un nom sans horodatage s’écrase à la sauvegarde suivante. Le script `check-cloud.sh` doit s’exécuter sans erreur et produire un fichier `etat-cloud-<date>.txt` contenant les mêmes données que l’[exercice 2.1](#j2-ex-2-1). Le tableau de bord est validé s’il contient des **valeurs réelles** dans toutes ses sections (et non des cases cochées sans chiffres). Concernant le redémarrage : après `unstack.sh` seul, les services sont arrêtés mais le projet `demo`, ses réseaux et `demo-instance` subsistent dans les bases — c’est ce que l’exercice vérifie. Attention : la relance `stack.sh` **supprime et recrée les bases**, le cloud repart vide ; d’où l’instantané préalable. `clean.sh`, lui, efface tous les fichiers générés et n’a pas sa place dans cette séquence. En cas de créneau insuffisant pour `stack.sh`, la procédure décrite (commandes, durée, contrôles) vaut exécution, à condition d’être écrite dans le tableau de bord.
 
 </details>
 
@@ -1278,16 +1302,16 @@ La procédure suit l’arbre de décision du jour : d’abord le chemin réseau,
 
 **Exercice D — Lecture critique d’un état saturé (à emporter)**
 
-Un collègue vous transmet : 380 Mo de mémoire disponible, charge à 5,4 sur 4 cœurs, `vcpus_used` égal à `vcpus`, disque à 92 %. Donner trois actions immédiates et justifier leur ordre de priorité.
+Un collègue vous transmet : 380 Mo de mémoire disponible, charge à 5,4 sur 3 vCPU, `vcpus_used` égal à `vcpus`, disque à 92 %. Donner trois actions immédiates et justifier leur ordre de priorité.
 
 <details>
 <summary>Solution — Exercice D</summary>
 
 1. **Stabiliser la mémoire (immédiat).** 380 Mo disponibles annoncent un arrêt prochain par manque de mémoire. Action : `openstack server list --all-projects`, arrêter les instances non critiques (`openstack server stop <identifiant>`), puis recontrôler `free -h`. La mémoire prime car son épuisement arrête le nœud entier.
-2. **Réduire la charge processeur (court délai).** Une charge de 5,4 sur 4 cœurs signifie des requêtes en attente ; relier avec `top -b -n1 | head -15` pour identifier le processus, puis vérifier que ce n’est pas un pic légitime d’instance.
+2. **Réduire la charge processeur (court délai).** Une charge de 5,4 sur 3 vCPU signifie des requêtes en attente ; relier avec `top -b -n1 | head -15` pour identifier le processus, puis vérifier que ce n’est pas un pic légitime d’instance.
 3. **Traiter le disque (dès que possible).** 92 % d’occupation risque d’empêcher la création de volumes et la rotation des journaux ; `df -h /` pour localiser, puis purge des journaux anciens et vérification du fichier de boucle de Cinder.
 
-L’ordre se justifie par l’irréversibilité : la saturation mémoire tue des processus (perte d’état), la charge ralentit, le disque se vide progressivement. Le constat complet (`vcpus_used` = `vcpus`) confirme par ailleurs qu’aucune nouvelle instance ne peut être créée : c’est un signal de dimensionnement à reporter au jour 3.
+L’ordre se justifie par l’irréversibilité : la saturation mémoire tue des processus (perte d’état), la charge ralentit, le disque se vide progressivement. Le constat complet (`vcpus_used` = `vcpus`) confirme par ailleurs qu’aucune nouvelle instance ne peut être créée : c’est un signal de dimensionnement à reporter au [jour 3](jour-3.md).
 
 </details>
 
@@ -1306,10 +1330,10 @@ L’ordre se justifie par l’irréversibilité : la saturation mémoire tue des
 
 ### Couverture Jour 2
 
-| Séquence | Thème | Livrable produit | Réutilisation au jour 3 |
+| Séquence | Thème | Livrable produit | Réutilisation au [jour 3](jour-3.md) |
 |----------|-------|------------------|-------------------------|
-| S1 | Configuration avancée : Keystone, Neutron (OVN), Nova, Horizon | Projet `demo`, utilisateur `demo-user`, réseau `demo-net` + routeur + groupe `demo-sg`, instance `demo-instance` avec adresse flottante | Jour 3 (déploiement du scénario complet) |
-| S2 | Administration, surveillance et dépannage | Tableau de bord `surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées, procédure de maintenance maîtrisée | Jour 3 (méthodes de vérification et de surveillance réutilisées) |
+| S1 | Configuration avancée : Keystone, Neutron (OVN), Nova, Horizon | Projet `demo`, utilisateur `demo-user`, réseau `demo-net` + routeur + groupe `demo-sg`, instance `demo-instance` avec adresse flottante | [Jour 3](jour-3.md) (déploiement du scénario complet) |
+| S2 | Administration, surveillance et dépannage | Tableau de bord `surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées, procédure de maintenance maîtrisée | [Jour 3](jour-3.md) (méthodes de vérification et de surveillance réutilisées) |
 
 ### Ce que le jour 2 a établi
 
@@ -1332,7 +1356,7 @@ flowchart LR
     L5 --> L6["J3S2 — politique de sécurité et de sauvegarde"]
 ```
 
-**Fig 8** — Chaîne des livrables : le jour 2 consomme le cloud du jour 1 et prépare les ressources et la méthode de surveillance du jour 3.
+**Fig 8** — Chaîne des livrables : le [jour 2](jour-2.md) consomme le cloud du [jour 1](jour-1.md) et prépare les ressources et la méthode de surveillance du [jour 3](jour-3.md).
 
 ---
 
@@ -1417,13 +1441,13 @@ cd /opt/stack/devstack && ./unstack.sh            # arrêt propre (données cons
 
 | Document | Lien |
 |----------|------|
-| Documentation officielle d’OpenStack | https://docs.openstack.org/ |
-| Guide d’administration d’OpenStack | https://docs.openstack.org/admin/ |
-| Keystone (domaines, projets, rôles) | https://docs.openstack.org/keystone/ |
-| Neutron (réseaux, groupes de sécurité, OVN) | https://docs.openstack.org/neutron/ |
-| Nova (instances, redimensionnement) | https://docs.openstack.org/nova/ |
-| Administration du réseau avec OVN | https://docs.openstack.org/neutron/latest/admin/ovn/index.html |
-| Documentation de DevStack (scripts et journaux) | https://docs.openstack.org/devstack/ |
-| Commande `openstack` (python-openstackclient) | https://docs.openstack.org/python-openstackclient/ |
-| Notices de version 2026.1 | https://releases.openstack.org/2026.1/ |
-| CIS Benchmarks (dont OpenStack) | https://www.cisecurity.org/benchmarks |
+| Documentation officielle d’OpenStack | <https://docs.openstack.org/> |
+| Guide d’administration d’OpenStack | <https://docs.openstack.org/admin/> |
+| Keystone (domaines, projets, rôles) | <https://docs.openstack.org/keystone/> |
+| Neutron (réseaux, groupes de sécurité, OVN) | <https://docs.openstack.org/neutron/> |
+| Nova (instances, redimensionnement) | <https://docs.openstack.org/nova/> |
+| Administration du réseau avec OVN | <https://docs.openstack.org/neutron/latest/admin/ovn/index.html> |
+| Documentation de DevStack (scripts et journaux) | <https://docs.openstack.org/devstack/> |
+| Commande `openstack` (python-openstackclient) | <https://docs.openstack.org/python-openstackclient/> |
+| Notices de version 2026.1 | <https://releases.openstack.org/gazpacho/> |
+| CIS Benchmarks (dont OpenStack) | <https://www.cisecurity.org/benchmarks> |
