@@ -224,19 +224,3 @@ L'architecture microservices d'OpenStack nous permet de :
 - Éviter l'enfermement propriétaire (vendor lock-in)
 
 Cette approche permet aux organisations de quitter les plateformes propriétaires tout en conservant le contrôle total de leur infrastructure.
-
-## Conclusion
-
-L'architecture microservices d'OpenStack est un facteur clé de son succès en tant que plateforme cloud. En décomposant des fonctionnalités cloud complexes en services indépendants et interopérables, elle offre une flexibilité, une évolutivité et une résilience inégalées.
-
-Que vous construisiez un cloud privé, que vous modernisiez votre infrastructure ou que vous exploriez des alternatives aux plateformes de virtualisation traditionnelles, OpenStack offre une base puissante.
-
-👉 Vous voulez voir comment OpenStack peut fonctionner pour votre organisation ?
-
-Découvrez la solution de cloud privé c12n de Cloudification et voyez comment nous pouvons vous aider à concevoir, déployer et exploiter un environnement cloud entièrement ouvert et pérenne.
-
-**📨 Contactez-nous 📚 Parcourir d'autres sujets dans notre blog Cloud**
-
----
-
-*Traduction française de l'article « Behind the Scenes of OpenStack Microservice Architecture » — Cloudification, 27 mai 2024. Images reproduites localement dans le dossier `images/`.*
