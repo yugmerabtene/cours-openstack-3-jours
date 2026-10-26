@@ -308,12 +308,3 @@ sequenceDiagram
 7. `nova-compute` démarre l'instance sur l'hyperviseur ; son état passe à `ACTIVE`.
 
 Le provisionnement prend généralement 30 à 60 secondes. En cas d'échec, Nova réessaie (3 fois par défaut) sur un autre hôte ; si les tentatives échouent, l'instance passe en état `ERROR` avec un message exploitable pour le diagnostic.
-
-## Cas d'usage
-
-- **Cloud privé** : IaaS interne, self-service et isolation par projet.
-- **Cloud public** : mutualisation de ressources et facturation par usage.
-- **Télécoms et NFV** : fonctions réseau virtualisées et orchestration.
-- **Edge computing** : déploiements de petite taille en périphérie.
-- **IA/ML/HPC** : accès aux GPU et accélérateurs via Cyborg.
-- **Alternative à VMware** : migration d'infrastructures virtualisées.
