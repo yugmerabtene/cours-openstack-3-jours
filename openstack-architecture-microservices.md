@@ -2,9 +2,6 @@
 
 ![Architecture OpenStack](images/openstack-architecture.webp)
 
-Le schéma ci-dessus cartographie les services OpenStack par domaine fonctionnel. En haut figurent les interfaces web (Horizon, Skyline). Au centre, le provisionnement des charges de travail regroupe l'orchestration (Heat, Mistral, Aodh, Blazar, Zaqar), le cycle de vie applicatif (Trove, Magnum, Masakari) et le calcul (Nova pour les VM, Zun pour les conteneurs). Le stockage est séparé en trois plans : bloc (Cinder), objet (Swift) et fichier (Manila). Le réseau réunit le SDN (Neutron), la répartition de charge (Octavia) et le DNS (Designate), tandis que le cycle de vie matériel couvre le bare metal (Ironic) et les accélérateurs (Cyborg). En bas, les services partagés — Keystone (identité), Barbican (secrets), Glance (images) et Placement (ordonnancement) — sont transverses à tous les autres services.
-
-OpenStack est une plateforme cloud open source composée de services autonomes. Chaque service expose une API HTTP REST et couvre un domaine fonctionnel : calcul, réseau, stockage, identité, images ou orchestration. L'assemblage de ces services fournit une infrastructure cloud de type IaaS. Ce document décrit les composants principaux, leur rôle et leur interaction lors du provisionnement d'une instance.
 
 ## Principe de l'architecture microservices
 
