@@ -153,7 +153,7 @@ Swift assure la durabilité par réplication ou erasure coding, la tolérance au
 
 ### Interfaces web et orchestration
 
-- **Skyline** : interface web alternative à Horizon, avec API REST.
+- **Skyline** : interface web alternative à Horizon, avec un frontend moderne et une API REST dédiée (`skyline-apiserver`), alors qu'Horizon est une application Django qui appelle directement les API des services.
 - **Mistral** : workflows (Workflow-as-a-Service) pour des tâches asynchrones et des processus métier.
 - **Aodh** : alertes basées sur les métriques de télémétrie ; déclenche des actions (auto-scaling, orchestration).
 - **Blazar** : réservation de ressources (calcul, stockage) sur un créneau donné.
