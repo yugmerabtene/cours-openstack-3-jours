@@ -34,6 +34,8 @@
 
 ---
 
+<a id="j2-s1"></a>
+
 ## S1 — Configuration avancée des services OpenStack (09h00-12h00)
 
 ### Objectifs
@@ -66,7 +68,7 @@ Les vérifications minimales à effectuer au démarrage de cette séquence sont 
 | Agents réseau | `openstack network agent list` | Vérifier les agents OVN (ne pas chercher les agents L3/DHCP historiques). |
 | Images et graines | `openstack image list` et `openstack flavor list` | S’assurer que CirrOS et `m1.tiny` sont présents. |
 
-> **Bon à savoir** — Les unités système d’OpenStack dans DevStack sont nommées `devstack@<service>` (par exemple `devstack@n-cpu` pour le calcul). Leur statut se lit avec `systemctl`, leurs journaux avec `journalctl` : c’est l’entrée de diagnostic utilisée dès l’après-midi (séquence S2).
+> **Bon à savoir** — Les unités système d’OpenStack dans DevStack sont nommées `devstack@<service>` (par exemple `devstack@n-cpu` pour le calcul). Leur statut se lit avec `systemctl`, leurs journaux avec `journalctl` : c’est l’entrée de diagnostic utilisée dès l’après-midi ([séquence S2](#j2-s2)).
 
 #### 2. Keystone en profondeur : domaines, projets, utilisateurs, rôles, RBAC
 
@@ -209,7 +211,7 @@ openstack security group rule create --proto icmp demo-sg
 # --proto icmp : autorise l’écho (ping) pour le diagnostic
 ```
 
-> **Attention (groupes de sécurité)** — Un groupe de sécurité neuf n’autorise rien en entrée : c’est la posture par défaut, et c’est une bonne chose. Chaque ouverture doit être justifiée. En entreprise, on restreint en plus la source de la règle. Attention au cas d’une instance jointe par son adresse flottante depuis la VM DevStack : le trafic sort par `br-ex`, dont l’adresse est `172.24.4.1`, et l’instance voit cette adresse comme source. Une règle limitée à `192.168.56.0/24` ne verrait donc jamais ce trafic et couperait l’accès ; la source à autoriser est `172.24.4.1/32` (voir exercice B).
+> **Attention (groupes de sécurité)** — Un groupe de sécurité neuf n’autorise rien en entrée : c’est la posture par défaut, et c’est une bonne chose. Chaque ouverture doit être justifiée. En entreprise, on restreint en plus la source de la règle. Attention au cas d’une instance jointe par son adresse flottante depuis la VM DevStack : le trafic sort par `br-ex`, dont l’adresse est `172.24.4.1`, et l’instance voit cette adresse comme source. Une règle limitée à `192.168.56.0/24` ne verrait donc jamais ce trafic et couperait l’accès ; la source à autoriser est `172.24.4.1/32` (voir [exercice B](#j2-ex-b)).
 
 #### 4. Nova en profondeur : graines, images, paires de clés, cycle de vie des instances
 
@@ -287,7 +289,7 @@ openstack server resize confirm demo-instance
 
 #### 5. Horizon : corrélation interface et ligne de commande
 
-Horizon expose les mêmes API que la ligne de commande, à travers des pages par ressource. Pour chaque opération réalisée en ligne de commande dans S1, l’apprenant la retrouve dans l’interface :
+Horizon expose les mêmes API que la ligne de commande, à travers des pages par ressource. Pour chaque opération réalisée en ligne de commande dans [S1](#j2-s1), l’apprenant la retrouve dans l’interface :
 
 | Commande | Emplacement Horizon | Intérêt pédagogique |
 |----------|---------------------|---------------------|
@@ -306,13 +308,13 @@ Horizon expose les mêmes API que la ligne de commande, à travers des pages par
 
 ### Mapping Sécurité
 
-Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contrôle à confirmer sur la version du benchmark retenue, conformément au cadrage technique).
+Référentiel : principes des **CIS Benchmarks** (cloud et Ubuntu), transposés à OpenStack. Il n’existe pas de benchmark CIS OpenStack dédié ; les correspondances ci-dessous sont pédagogiques et ne citent pas d’identifiants CIS officiels.
 
 | Référence | Réf. technique | Description |
 |-----------|----------------|-------------|
-| CIS OpenStack — Keystone (gestion des identités) | Domaine « comptes et autorisations » | Comptes nominatifs, moindre privilège, pas de partage du compte `admin`. |
-| CIS OpenStack — Neutron (segmentation) | Domaine « réseau » | Isolation par projet et par réseau, groupes de sécurité restrictifs. |
-| CIS OpenStack — Nova | Domaine « calcul » | Paires de clés, ouverture stricte des ports, quotas maîtrisés. |
+| CIS (transposé) — Keystone (gestion des identités) | Domaine « comptes et autorisations » | Comptes nominatifs, moindre privilège, pas de partage du compte `admin`. |
+| CIS (transposé) — Neutron (segmentation) | Domaine « réseau » | Isolation par projet et par réseau, groupes de sécurité restrictifs. |
+| CIS (transposé) — Nova | Domaine « calcul » | Paires de clés, ouverture stricte des ports, quotas maîtrisés. |
 
 > **Pourquoi mapper la sécurité dans cette séquence ?** — Les décisions prises ici (qui accède à quoi, quels ports sont ouverts, quels réseaux sont isolés) dessinent la surface d’attaque du cloud. Une correction après déploiement coûte toujours plus cher qu’une configuration juste dès le départ.
 
@@ -514,11 +516,11 @@ openstack role assignment list --project demo --names
 - [ ] Console web ouverte depuis l’URL affichée
 - [ ] Connexion SSH établie avec `cirros@<adresse flottante>`
 - [ ] Isolation constatée : les ressources `demo` sont distinctes du projet `admin`
-- [ ] Recensement final des livrables S1 consigné (projet, utilisateur, réseau, instance)
+- [ ] Recensement final des livrables [S1](#j2-s1) consigné (projet, utilisateur, réseau, instance)
 
 ### Vérification pratique
 
-Contrôle de bout en bout à exécuter seul en fin de séance (environ 20 min) : il rejoue la chaîne complète de S1 et ajoute le redimensionnement.
+Contrôle de bout en bout à exécuter seul en fin de séance (environ 20 min) : il rejoue la chaîne complète de [S1](#j2-s1) et ajoute le redimensionnement.
 
 1. **Rôles et appartenance aux projets** — en contexte administrateur :
 
@@ -563,7 +565,7 @@ openstack server resize confirm demo-instance
 
 **Exercice 1.1 — Vérification du cloud**
 
-`whoami` doit afficher `stack`. `source openrc admin admin` positionne `OS_USERNAME`, `OS_PROJECT_NAME`, `OS_AUTH_URL` (au format `http://192.168.56.10/identity/v3`) et les autres variables. `openstack token issue` renvoie un identifiant de jeton, une date d’expiration et le projet `admin` : en cas d’échec, recharger l’environnement avant de soupçonner Keystone. `openstack service list` doit lister `identity`, `compute`, `network`, `image`, `block-storage` et `placement` (et `object-store` si Swift est activé). `openstack network agent list` affiche les agents OVN : une liste vide, alors que `compute service list` est normal, signale un souci Neutron/OVN à diagnostiquer (voir S2).
+`whoami` doit afficher `stack`. `source openrc admin admin` positionne `OS_USERNAME`, `OS_PROJECT_NAME`, `OS_AUTH_URL` (au format `http://192.168.56.10/identity/v3`) et les autres variables. `openstack token issue` renvoie un identifiant de jeton, une date d’expiration et le projet `admin` : en cas d’échec, recharger l’environnement avant de soupçonner Keystone. `openstack service list` doit lister `identity`, `compute`, `network`, `image`, `block-storage` et `placement` (et `object-store` si Swift est activé). `openstack network agent list` affiche les agents OVN : une liste vide, alors que `compute service list` est normal, signale un souci Neutron/OVN à diagnostiquer (voir [S2](#j2-s2)).
 
 **Exercice 1.2 — Keystone**
 
@@ -584,7 +586,7 @@ DevStack a déjà créé le projet `demo` (ainsi qu’un utilisateur `demo`) pou
 - `ssh-keygen` : si le fichier existe déjà, répondre non (n) pour éviter d’écraser une clé antérieure. `chmod 600` est exigé par SSH, sinon la connexion est refusée (« UNPROTECTED PRIVATE KEY FILE »).
 - Le passage à `ACTIVE` prend quelques secondes en KVM imbriqué, plusieurs minutes en émulation QEMU (scénario sans `/dev/kvm`) : ne pas conclure trop vite à un échec.
 - `openstack server show demo-instance` : la section `addresses` doit contenir le réseau `demo-net` avec l’adresse 192.168.100.x et l’adresse flottante associée.
-- Échec fréquent d’association d’adresse flottante : adresse déjà associée à une autre instance, ou plus d’adresse libre dans `public` (alors libérer une adresse inutilisée, cf. S2).
+- Échec fréquent d’association d’adresse flottante : adresse déjà associée à une autre instance, ou plus d’adresse libre dans `public` (alors libérer une adresse inutilisée, cf. [scénario B en S2](#j2-scenario-b)).
 - En cas d’erreur de connexion SSH : d’abord vérifier la règle TCP/22 du groupe `demo-sg`, puis l’association de l’adresse flottante, puis ouvrir la console web ([exercice 1.5](#j2-ex-1-5)) pour diagnostiquer depuis l’intérieur.
 
 **Exercice 1.5 — Consolidation**
@@ -597,15 +599,15 @@ La console web (`--novnc`) est servie par le service `n-novnc` et joignable depu
 
 | Contrôle | Référence | Description |
 |----------|-----------|-------------|
-| Comptes nominatifs | CIS OpenStack — Keystone | Un compte par rôle d’exploitation ; le compte `admin` jamais partagé. |
-| Moindre privilège | CIS OpenStack — RBAC | Rôle `member` par projet, `reader` pour la supervision, aucun droit élargi par facilité. |
-| Isolation multi-projet | CIS OpenStack — Neutron | Réseau, quotas et groupes de sécurité propres à chaque projet. |
-| Groupes de sécurité par défaut fermés | CIS OpenStack — Neutron | Aucune règle ouverte sans justification ; source restreinte à la plage précise du trafic (réseau interne ou porte externe du routeur `172.24.4.1/32` selon l’accès). |
-| Paires de clés, pas de mots de passe | CIS OpenStack — Nova | Accès SSH par clé, clé privée en droits 600, jamais réutilisée hors lab. |
+| Comptes nominatifs | CIS (transposé) — Keystone | Un compte par rôle d’exploitation ; le compte `admin` jamais partagé. |
+| Moindre privilège | CIS (transposé) — RBAC | Rôle `member` par projet, `reader` pour la supervision, aucun droit élargi par facilité. |
+| Isolation multi-projet | CIS (transposé) — Neutron | Réseau, quotas et groupes de sécurité propres à chaque projet. |
+| Groupes de sécurité par défaut fermés | CIS (transposé) — Neutron | Aucune règle ouverte sans justification ; source restreinte à la plage précise du trafic (réseau interne ou porte externe du routeur `172.24.4.1/32` selon l’accès). |
+| Paires de clés, pas de mots de passe | CIS (transposé) — Nova | Accès SSH par clé, clé privée en droits 600, jamais réutilisée hors lab. |
 | Plages d’adresses imposées | Méthode — cadrage lab | 192.168.100.0/24 pour les locataires, hors des plages NAT et host-only. |
 | Traçabilité des opérations | Méthode — exploitation | Chaque opération effectuée en ligne de commande, avec drapeaux commentés, puis vérifiée dans Horizon. |
 
-> **Bonnes pratiques** — Conservez une trace des objets créés dans S1 (noms, adresses, commandes) : le [jour 3](jour-3.md) les reprendra pour déployer le scénario complet. Une ligne de commande documentée dans un fichier d’exploitation vaut mieux qu’une succession de clics dans l’interface, qu’on ne peut pas relire ni rejouer.
+> **Bonnes pratiques** — Conservez une trace des objets créés dans [S1](#j2-s1) (noms, adresses, commandes) : le [jour 3](jour-3.md) les reprendra pour déployer le scénario complet. Une ligne de commande documentée dans un fichier d’exploitation vaut mieux qu’une succession de clics dans l’interface, qu’on ne peut pas relire ni rejouer.
 
 ### Exercices
 
@@ -647,6 +649,8 @@ La plage 192.168.110.0/24 reste hors des plages réservées du lab et ne chevauc
 
 </details>
 
+<a id="j2-ex-b"></a>
+
 **Exercice B — Groupe de sécurité restrictif (en autonomie en fin de séance)**
 
 Restreindre la règle SSH de `demo-sg` à la seule porte externe du routeur OVN (`172.24.4.1/32`), puis justifier en deux phrases l’apport de sécurité.
@@ -683,6 +687,8 @@ Compromis pragmatique : pour autoriser à la fois le SSH direct (réseau interne
 > - Chaque opération en ligne de commande possède son équivalent Horizon : l’alterner rend les deux familles d’outils maîtrisées.
 
 ---
+
+<a id="j2-s2"></a>
 
 ## S2 — Administration et surveillance du Cloud privé (13h00-16h00)
 
@@ -738,7 +744,7 @@ openstack server list --project demo
 openstack floating ip list --project demo
 ```
 
-> **Bon à savoir** — `dstat` est installé par DevStack par défaut (désactivable en mode minimal au [jour 1](jour-1.md)). Quand il est présent, `dstat -cdngy 2 5` fournit un aperçu temps réel — processeur, disque, pagination, réseau et statistiques système — cinq fois à deux secondes d’intervalle. Le mode complet `dstat -a` ajoute en plus la mémoire, le swap et l’usage des systèmes de fichiers. S’il a été désactivé, les commandes ci-dessus suffisent : aucune dépendance externe n’est requise.
+> **Bon à savoir** — `dstat` est installé par DevStack par défaut (désactivable en [mode minimal au jour 1](jour-1.md#6-rédaction-du-fichier-localconf)). Quand il est présent, `dstat -cdngy 2 5` fournit un aperçu temps réel — processeur, disque, pagination, réseau et statistiques système — cinq fois à deux secondes d’intervalle. Le mode complet `dstat -a` ajoute en plus la mémoire, le swap et l’usage des systèmes de fichiers. S’il a été désactivé, les commandes ci-dessus suffisent : aucune dépendance externe n’est requise.
 
 #### 2. Journaux : `journalctl`, répertoires `/var/log`, unités `devstack@*`
 
@@ -929,10 +935,10 @@ OUT=~/formation-openstack/etat-cloud-$STAMP.txt
 
 {
   echo "=== État du cloud — $STAMP ==="
-  source /opt/stack/devstack/openrc admin admin 2>/dev/null
-  openstack token issue >/dev/null 2>&1 \
+  source /opt/stack/devstack/openrc admin admin
+  openstack token issue >/dev/null \
     && echo "[OK] Jeton valide" \
-    || echo "[ERREUR] Jeton invalide — recharger openrc"
+    || echo "[ERREUR] Jeton invalide — recharger openrc (détail ci-dessous)"
   openstack compute service list
   openstack network agent list
   openstack hypervisor stats show
@@ -955,8 +961,8 @@ chmod +x ~/formation-openstack/check-cloud.sh
 
 | Référence | Réf. technique | Description |
 |-----------|----------------|-------------|
-| CIS OpenStack — Journalisation | Domaine « audit et traçabilité » | Consulter et conserver les journaux ; ne pas désactiver la journalisation. |
-| CIS OpenStack — Gestion des ressources | Domaine « quotas et limites » | Quotas par projet pour prévenir l’épuisement de ressources et l’abus. |
+| CIS (transposé) — Journalisation | Domaine « audit et traçabilité » | Consulter et conserver les journaux ; ne pas désactiver la journalisation. |
+| CIS (transposé) — Gestion des ressources | Domaine « quotas et limites » | Quotas par projet pour prévenir l’épuisement de ressources et l’abus. |
 
 > **Pourquoi ce mapping dans une séquence d’administration ?** — Surveiller, c’est aussi détecter : consommation inexpliquée, série de connexions échouées, journal qui s’interrompt brutalement. La surveillance complète le moindre privilège appliqué le matin — l’un limite les dégâts possibles, l’autre les rend détectables.
 
@@ -967,7 +973,7 @@ chmod +x ~/formation-openstack/check-cloud.sh
 | Élément | Valeur |
 |---------|--------|
 | Machine virtuelle | VM `lab-openstack` (Ubuntu Server 24.04 LTS), cloud DevStack `stable/2026.1` en fonctionnement |
-| État en début d’après-midi | Projet `demo`, réseau `demo-net`, instance `demo-instance` (livrables de S1) |
+| État en début d’après-midi | Projet `demo`, réseau `demo-net`, instance `demo-instance` (livrables de [S1](#j2-s1)) |
 | Outils | `journalctl`, `systemctl`, `free`, `df`, `top`, `dstat` (si présent), CLI `openstack` |
 | Livrables | Tableau de bord `~/formation-openstack/surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées |
 | Durée | 3 h (13h00-16h00) |
@@ -1067,6 +1073,8 @@ openstack compute service list
 - [ ] Journal consulté, cause recherchée
 - [ ] Redémarrage effectué et état revérifié dans `compute service list`
 - [ ] Correspondance Horizon vérifiée : Admin → Tableau de bord (état des services) et Admin → Hyperviseurs (capacité du nœud de calcul)
+
+<a id="j2-scenario-b"></a>
 
 **Scénario B — Pool d’adresses flottantes (10 min)**
 
@@ -1219,7 +1227,7 @@ openstack server list --project demo
 
 ### Vérification pratique
 
-Contrôle de synthèse à exécuter seul en clôture de S2 (environ 15 min). Si la relance `stack.sh` de l’[exercice 2.4](#j2-ex-2-4) n’a pas eu lieu (créneau insuffisant), n’exécuter que les étapes 2 et 3, qui ne dépendent pas des services OpenStack.
+Contrôle de synthèse à exécuter seul en clôture de [S2](#j2-s2) (environ 15 min). Si la relance `stack.sh` de l’[exercice 2.4](#j2-ex-2-4) n’a pas eu lieu (créneau insuffisant), n’exécuter que les étapes 2 et 3, qui ne dépendent pas des services OpenStack.
 
 1. **Journal d’un service et journaux OVN** — les traces applicatives et les journaux réseau vivent à deux endroits distincts :
 
@@ -1273,8 +1281,8 @@ Les sauvegardes doivent exister avec leur suffixe horodaté (`local.conf.bak.<da
 | Contrôle | Référence | Description |
 |----------|-----------|-------------|
 | Surveillance périodique et conservée | Méthode — exploitation | Script de collecte horodaté plutôt qu’observations isolées ; historique conservé pour comparaison. |
-| Lecture structurée des journaux | CIS OpenStack — Journalisation | `journalctl` par unité d’abord, journaux OVN et journal d’installation ensuite ; jamais de purge sans analyse. |
-| Quotas et limites | CIS OpenStack — Ressources | Consulter quotas et usages avant saturation ; ajuster par la procédure d’administration. |
+| Lecture structurée des journaux | CIS (transposé) — Journalisation | `journalctl` par unité d’abord, journaux OVN et journal d’installation ensuite ; jamais de purge sans analyse. |
+| Quotas et limites | CIS (transposé) — Ressources | Consulter quotas et usages avant saturation ; ajuster par la procédure d’administration. |
 | Arrêt et relance propres | DevStack — documentation | `unstack.sh` avant changement, `stack.sh` pour relancer ; `clean.sh` réservé aux cas endommagés. |
 | Sauvegarde avant intervention | Méthode — continuité | `local.conf`, `openrc` et paires de clés sauvegardés horodatés avant toute maintenance. |
 | Mise à jour maîtrisée | Méthode — maintenance | Branche `stable/2026.1` figée, `git pull` uniquement sur cloud à l’état connu et créneau complet. |
@@ -1332,8 +1340,8 @@ L’ordre se justifie par l’irréversibilité : la saturation mémoire tue des
 
 | Séquence | Thème | Livrable produit | Réutilisation au [jour 3](jour-3.md) |
 |----------|-------|------------------|-------------------------|
-| S1 | Configuration avancée : Keystone, Neutron (OVN), Nova, Horizon | Projet `demo`, utilisateur `demo-user`, réseau `demo-net` + routeur + groupe `demo-sg`, instance `demo-instance` avec adresse flottante | [Jour 3](jour-3.md) (déploiement du scénario complet) |
-| S2 | Administration, surveillance et dépannage | Tableau de bord `surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées, procédure de maintenance maîtrisée | [Jour 3](jour-3.md) (méthodes de vérification et de surveillance réutilisées) |
+| [S1](#j2-s1) | Configuration avancée : Keystone, Neutron (OVN), Nova, Horizon | Projet `demo`, utilisateur `demo-user`, réseau `demo-net` + routeur + groupe `demo-sg`, instance `demo-instance` avec adresse flottante | [Jour 3](jour-3.md) (déploiement du scénario complet) |
+| [S2](#j2-s2) | Administration, surveillance et dépannage | Tableau de bord `surveillance-cloud.md`, script `check-cloud.sh`, sauvegardes horodatées, procédure de maintenance maîtrisée | [Jour 3](jour-3.md) (méthodes de vérification et de surveillance réutilisées) |
 
 ### Ce que le jour 2 a établi
 
@@ -1435,7 +1443,7 @@ cd /opt/stack/devstack && ./unstack.sh            # arrêt propre (données cons
 | OpenStack CLI | `openstack` (python-openstackclient) | Configuration, surveillance, dépannage |
 | OVN | fourni par DevStack | Moteur réseau logique de Neutron (diagnostic dédié) |
 | systemd / `journalctl` | inclus dans Ubuntu | Supervision des unités `devstack@*` |
-| `dstat` | installé par DevStack (désactivable en mode minimal) | Observabilité temps réel, en appoint |
+| `dstat` | installé par DevStack (désactivable en [mode minimal](jour-1.md#6-rédaction-du-fichier-localconf)) | Observabilité temps réel, en appoint |
 
 ### Références
 
@@ -1450,4 +1458,4 @@ cd /opt/stack/devstack && ./unstack.sh            # arrêt propre (données cons
 | Documentation de DevStack (scripts et journaux) | <https://docs.openstack.org/devstack/> |
 | Commande `openstack` (python-openstackclient) | <https://docs.openstack.org/python-openstackclient/> |
 | Notices de version 2026.1 | <https://releases.openstack.org/gazpacho/> |
-| CIS Benchmarks (dont OpenStack) | <https://www.cisecurity.org/benchmarks> |
+| CIS Benchmarks (cloud et OS ; pas de benchmark OpenStack dédié) | <https://www.cisecurity.org/benchmarks> |

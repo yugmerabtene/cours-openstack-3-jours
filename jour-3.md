@@ -35,13 +35,15 @@
 
 ---
 
+<a id="j3-s1"></a>
+
 ## S1 — Conception d’un Cloud d’entreprise (09h00-12h00)
 
 ### Objectifs
 
 - Traduire la note d’analyse des besoins du [jour 1](jour-1.md) en architecture cible et justifier le dimensionnement au regard des ressources réelles de la VM (10 Go/3 vCPU de référence sur hôte 16 Go/4c/4T ; 6 Go/2 vCPU en scénario B ; 12-14 Go/4 vCPU sur hôte 32 Go), avec marges et ratio d’oversubscription.
 - Définir les projets, rôles, réseaux, images, graines et quotas justifiés pour un scénario complet à deux instances isolées.
-- Déployer les deux instances à rôles représentatifs (`web-server` et `db-server`) en réutilisant la topologie et les méthodes des jours 1-2.
+- Déployer les deux instances à rôles représentatifs (`web-server` et `db-server`) en réutilisant la topologie et les méthodes des [jours 1](jour-1.md) et [2](jour-2.md).
 - Valider le déploiement par des tests de connectivité (SSH via adresse flottante, console web en secours) et documenter les résultats.
 
 ### Contenu Théorique
@@ -71,6 +73,8 @@ Le laboratoire s’exécute dans une VM soumise aux contraintes suivantes, confo
 | RAM | ~4-5 Go sur 10 Go | ~4-5 Go | Laisser toujours 1 Go libre. Sur 10 Go, une à deux instances `m1.tiny` (1 Go au total) tiennent avec marge ; ne pas en ajouter sans surveiller `free -h`. En variante 6 Go, ~2 Go disponibles et une seule `m1.tiny` recommandée. |
 | vCPU | ~1 vCPU | ~2 vCPU | Avec 3 vCPU alloués, rester à 1:1 (deux `m1.tiny` = 2 vCPU) ; éviter l’oversubscription en lab. En variante 6 Go/2 vCPU, une seule `m1.tiny` à 1:1. |
 | Stockage | ~15-25 Go utilisés | ~55-65 Go libres sur 80 Go | Dépend de Cinder/Swift et des images. En variante 60 Go, ~35-45 Go libres. Surveiller avec `df -h /`. |
+
+<a id="j3-repere-pratique"></a>
 
 > **Repère pratique (VM de référence à 10 Go/3 vCPU)** — La VM `lab-openstack` de référence est configurée à 10 Go/3 vCPU sur un hôte 16 Go/4c/4T. Le budget des instances se réduit en conséquence : ~4-5 Go disponibles (1 Go à garder libre), soit **une à deux instances `m1.tiny` (1 Go au total)**. Pour le scénario à deux instances (`web-server` + `db-server`), les lancer toutes les deux reste réaliste ; au-delà, arrêter ou supprimer une instance avant d’en lancer d’autres. En variante 6 Go/2 vCPU (scénario B), ~2 Go disponibles et une seule `m1.tiny` recommandée. Sur un hôte 32 Go, attribuer 12-14 Go/4 vCPU laisse ~7-9 Go disponibles.
 
@@ -147,13 +151,13 @@ flowchart TB
 
 ### Mapping Sécurité
 
-Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contrôle à confirmer sur la version du benchmark retenue, conformément au cadrage technique).
+Référentiel : principes des **CIS Benchmarks** (cloud et Ubuntu), transposés à OpenStack. Il n’existe pas de benchmark CIS OpenStack dédié ; les correspondances ci-dessous sont pédagogiques et ne citent pas d’identifiants CIS officiels.
 
 | Référence | Réf. technique | Description |
 |-----------|----------------|-------------|
-| CIS OpenStack — Conception et dimensionnement | Domaine « quotas et isolation » | Quotas justifiés par projet, marges de ressources, pas de sur-allocation. |
-| CIS OpenStack — Neutron (segmentation) | Domaine « réseau » | Réseaux locataires distincts par projet, adresses flottantes limitées à ce qui est nécessaire. |
-| CIS OpenStack — Nova (calcul) | Domaine « limites de ressources » | Flavors justifiés, nombre d’instances contenu dans le budget réel de la VM. |
+| CIS (transposé) — Conception et dimensionnement | Domaine « quotas et isolation » | Quotas justifiés par projet, marges de ressources, pas de sur-allocation. |
+| CIS (transposé) — Neutron (segmentation) | Domaine « réseau » | Réseaux locataires distincts par projet, adresses flottantes limitées à ce qui est nécessaire. |
+| CIS (transposé) — Nova (calcul) | Domaine « limites de ressources » | Flavors justifiés, nombre d’instances contenu dans le budget réel de la VM. |
 
 > **Pourquoi mapper la sécurité dans cette séquence ?** — Les choix de dimensionnement et d’isolation pris ici (quotas, réseaux par projet, adresses flottantes) fixent la surface d’attaque du déploiement. Une architecture qui isole dès la conception coûte moins cher qu’un durcissement subi après coup.
 
@@ -277,7 +281,7 @@ openstack floating ip create --project project-db public
 #### Exercice 1.4 : Déployer les deux instances et leur affecter des adresses flottantes (11h20-11h45, 25 min)
 
 1. **Préparer les paires de clés** (8 min) pour `web-user` et `db-user` (ou réutiliser une paire existante).
-2. **Créer les groupes de sécurité minimaux** (7 min) : SSH (22/tcp) + ICMP autorisés. Pour `db-server`, prévoir la restriction au réseau web, appliquée en S2 ([exercice 2.1](#j3-ex-2-1)).
+2. **Créer les groupes de sécurité minimaux** (7 min) : SSH (22/tcp) + ICMP autorisés. Pour `db-server`, prévoir la restriction au réseau web, appliquée en [S2](#j3-s2) ([exercice 2.1](#j3-ex-2-1)).
 3. **Lancer `web-server` et `db-server`** (10 min) avec graine `m1.tiny`, image CirrOS, réseau dédié et groupe de sécurité dédié (rôles représentatifs, sans service applicatif). L’adresse flottante à associer est celle allouée à l’[exercice 1.3](#j3-ex-1-3).
 
 ```bash
@@ -332,7 +336,7 @@ openstack server add floating ip db-server <IP_FLOTTANTE_DB>
 
 > **Ordre des commandes** : le script `openrc` réécrit `OS_PASSWORD` avec le mot de passe administrateur ([rappel du jour 2](jour-2.md)). D’où l’ordre obligatoire `source openrc web-user project-web` puis `export OS_PASSWORD=lab123` ; inverser les deux écrase le bon mot de passe.
 
-> **Conseil pratique** : pour `db-sg`, restreindre l’accès SSH et le port « base de données » aux adresses du réseau web (`192.168.100.0/24`) plutôt qu’à `0.0.0.0/0`. C’est un premier pas vers le durcissement (abordé en S2, [exercice 2.1](#j3-ex-2-1)). Le port « base de données » n’est ici qu’une représentation : CirrOS n’héberge aucun serveur de base de données.
+> **Conseil pratique** : pour `db-sg`, restreindre l’accès SSH et le port « base de données » aux adresses du réseau web (`192.168.100.0/24`) plutôt qu’à `0.0.0.0/0`. C’est un premier pas vers le durcissement (abordé en [S2](#j3-s2), [exercice 2.1](#j3-ex-2-1)). Le port « base de données » n’est ici qu’une représentation : CirrOS n’héberge aucun serveur de base de données.
 
 <a id="j3-ex-1-5"></a>
 
@@ -375,7 +379,7 @@ openstack floating ip list --project project-db
 # Console web : source openrc web-user project-web && export OS_PASSWORD=lab123 && openstack console url show --novnc web-server
 ```
 
-**Checkpoints S1 :**
+**Checkpoints [S1](#j3-s1) :**
 
 - [ ] cloud vérifié
 - [ ] projets, utilisateurs et rôles créés
@@ -384,7 +388,7 @@ openstack floating ip list --project project-db
 - [ ] connectivité validée
 - [ ] résultats documentés
 
-**Correspondance Horizon — retrouver le déploiement dans l’interface.** Chaque action de ligne de commande de S1 se contrôle visuellement dans Horizon (session `admin` / `lab123`) :
+**Correspondance Horizon — retrouver le déploiement dans l’interface.** Chaque action de ligne de commande de [S1](#j3-s1) se contrôle visuellement dans Horizon (session `admin` / `lab123`) :
 
 | Action CLI | Chemin Horizon |
 |------------|----------------|
@@ -401,7 +405,7 @@ openstack floating ip list --project project-db
 
 ### Vérification pratique
 
-Contrôle croisé des livrables de S1, à mener seul (environ 15 min). Il relie la note d’analyse des besoins du [jour 1](jour-1.md) à l’infrastructure réellement déployée.
+Contrôle croisé des livrables de [S1](#j3-s1), à mener seul (environ 15 min). Il relie la note d’analyse des besoins du [jour 1](jour-1.md) à l’infrastructure réellement déployée.
 
 1. **Note face à la capacité réelle** — relever les hypothèses de la [section 8 de `note-besoins-cloud-prive.md`](jour-1.md#j1-note-structure), puis comparer avec la capacité de l’hyperviseur :
 
@@ -442,7 +446,7 @@ ssh -i ~/.ssh/web_key cirros@<IP_FLOTTANTE_WEB>
 2. **Exercice 1.2 — Projets et rôles** : `openstack role assignment list --names --project project-web` montre `web-user` avec rôle `member`.
 3. **Exercice 1.3 — Réseaux** : `web-net` (192.168.100.0/24), `db-net` (192.168.101.0/24), routeurs connectés à `public`. Éviter chevauchement avec `192.168.56.0/24` et `10.0.2.0/24`.
 4. **Exercice 1.4 — Instances** : `openstack server list --all-projects` affiche `web-server` et `db-server` dans l’état `ACTIVE`.
-5. **Exercice 1.5 — Connectivité** : après câblage de `br-ex` (voir le bloc « Tests depuis la VM »), `ping -c 4 <IP_FLOTTANTE_WEB>` réussi ; `ssh -i ~/.ssh/web_key cirros@<IP_FLOTTANTE_WEB>` fonctionne. Console web accessible si SSH bloqué.
+5. **Exercice 1.5 — Connectivité** : après câblage de `br-ex` (voir le bloc « Tests depuis la VM » dans l’[exercice 1.4](#j3-ex-1-4)), `ping -c 4 <IP_FLOTTANTE_WEB>` réussi ; `ssh -i ~/.ssh/web_key cirros@<IP_FLOTTANTE_WEB>` fonctionne. Console web accessible si SSH bloqué.
 6. **Contrôle final — Ressources** : `free -h`, `df -h /`, `openstack hypervisor stats show` pour vérifier la charge.
 
 **Dépannage — symptômes fréquents du déploiement :**
@@ -491,6 +495,8 @@ ssh -i ~/.ssh/web_key cirros@<IP_FLOTTANTE_WEB>
 > - Toujours valider par tests concrets (ping + SSH + console web).
 
 ---
+
+<a id="j3-s2"></a>
 
 ## S2 — Optimisation et sécurisation du Cloud privé (13h00-16h00)
 
@@ -579,14 +585,14 @@ Reste à enchaîner ces opérations dans un ordre sûr : le plan de reprise mini
 
 ### Mapping Sécurité
 
-Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contrôle à confirmer sur la version du benchmark retenue, conformément au cadrage technique).
+Référentiel : principes des **CIS Benchmarks** (cloud et Ubuntu), transposés à OpenStack. Il n’existe pas de benchmark CIS OpenStack dédié ; les correspondances ci-dessous sont pédagogiques et ne citent pas d’identifiants CIS officiels.
 
 | Référence | Réf. technique | Description |
 |-----------|----------------|-------------|
-| CIS OpenStack — Keystone (gestion des identités) | Domaine « comptes et autorisations » | Comptes nominatifs, moindre privilège, `admin` réservé à l’administration de plateforme. |
-| CIS OpenStack — Neutron (segmentation) | Domaine « réseau » | Groupes de sécurité restrictifs, jamais `0.0.0.0/0` pour SSH ou base de données. |
-| CIS OpenStack — Journalisation | Domaine « audit et traçabilité » | Consulter et conserver les journaux ; ne pas désactiver la journalisation ([rappel du jour 2](jour-2.md)). |
-| CIS OpenStack — Sauvegarde | Domaine « protection des données » | Sauvegardes horodatées, restaurations testées périodiquement. |
+| CIS (transposé) — Keystone (gestion des identités) | Domaine « comptes et autorisations » | Comptes nominatifs, moindre privilège, `admin` réservé à l’administration de plateforme. |
+| CIS (transposé) — Neutron (segmentation) | Domaine « réseau » | Groupes de sécurité restrictifs, jamais `0.0.0.0/0` pour SSH ou base de données. |
+| CIS (transposé) — Journalisation | Domaine « audit et traçabilité » | Consulter et conserver les journaux ; ne pas désactiver la journalisation ([rappel du jour 2](jour-2.md)). |
+| CIS (transposé) — Sauvegarde | Domaine « protection des données » | Sauvegardes horodatées, restaurations testées périodiquement. |
 
 > **Pourquoi mapper la sécurité dans cette séquence ?** — Le matin a construit le déploiement ; l’après-midi doit le rendre défendable. Les deux volets sont indissociables : une sauvegarde non testée et un compte trop privilégié se neutralisent l’un l’autre.
 
@@ -670,6 +676,8 @@ openstack server list --all-projects
 2. **Créer les instantanés Nova** (10 min) : un instantané par instance, dans le contexte de son projet (l’image reste alors propriétaire du projet qui possède l’instance).
 3. **Tester la restauration** (12 min) : recréer une instance depuis l’instantané dans le même contexte projet, vérifier qu’elle démarre, puis la supprimer.
 
+La phrase secrète `ENCRYPTION_PASS` est introduite à l’[exercice 0.4 du jour 1](jour-1.md#j1-ex-0-4) ; elle doit être réexportée dans chaque nouvelle session.
+
 ```bash
 # ----- Sauvegarde des configurations (utilisateur stack, aucune authentification requise) -----
 STAMP=$(date +%Y%m%d-%H%M%S)
@@ -680,7 +688,7 @@ cp -a ~/.ssh ~/ssh-bak.$STAMP && echo "Sauvegarde des clés SSH effectuée"
 # -a : copie archive, conserve les permissions (600 sur les clés privées)
 # && : le message ne s’affiche que si la copie réussit
 
-# ----- Copie chiffrée de local.conf (phrase secrète ENCRYPTION_PASS, voir jour 1) -----
+# ----- Copie chiffrée de local.conf (phrase secrète ENCRYPTION_PASS) -----
 # Une nouvelle session impose un réexport : export ENCRYPTION_PASS=lab123
 test -n "$ENCRYPTION_PASS" && echo "phrase secrète chargée"
 # test -n : vrai si la variable n’est pas vide ; sans cette vérification,
@@ -746,7 +754,7 @@ openstack server delete web-server-restore-test
 2. **Lister objectifs atteints** (7 min) : vérifier chaque objectif du [jour 3](jour-3.md).
 3. **Rédiger feuille de route** (5 min) : actions concrètes pour mise en œuvre en entreprise.
 
-**Checkpoints S2 :**
+**Checkpoints [S2](#j3-s2) :**
 
 - [ ] sécurité renforcée (RBAC et groupes de sécurité restrictifs)
 - [ ] goulots identifiés et pistes proposées
@@ -755,7 +763,7 @@ openstack server delete web-server-restore-test
 - [ ] test de restauration réussi
 - [ ] synthèse et feuille de route complétées
 
-**Correspondance Horizon — contrôler la sécurisation dans l’interface.** Les actions de durcissement de S2 se vérifient visuellement dans Horizon :
+**Correspondance Horizon — contrôler la sécurisation dans l’interface.** Les actions de durcissement de [S2](#j3-s2) se vérifient visuellement dans Horizon :
 
 | Action CLI | Chemin Horizon |
 |------------|----------------|
@@ -770,7 +778,7 @@ openstack server delete web-server-restore-test
 
 ### Vérification pratique
 
-Contrôle final des acquis de S2, à mener seul (environ 15 min) :
+Contrôle final des acquis de [S2](#j3-s2), à mener seul (environ 15 min) :
 
 1. **Groupe de sécurité `db-sg`** — la restriction de l’[exercice 2.1](#j3-ex-2-1) est en place :
 
@@ -1030,8 +1038,8 @@ cd /opt/stack/devstack && ./unstack.sh     # arrêt propre (données conservées
 | Neutron/OVN | <https://docs.openstack.org/neutron/latest/admin/ovn/index.html> |
 | Nova (instantanés et images) | <https://docs.openstack.org/nova/latest/user/launch-instances.html> |
 | Cinder (instantanés et volumes) | <https://docs.openstack.org/cinder/latest/> |
-| CIS Benchmarks OpenStack | <https://www.cisecurity.org/benchmarks> |
+| CIS Benchmarks (cloud et OS ; pas de benchmark OpenStack dédié) | <https://www.cisecurity.org/benchmarks> |
 
 ---
 
-**Fin de la formation « Configuration d’un cloud d’entreprise avec OpenStack » (Jours 1-2-3, 28/10/2026).**
+**Fin de la formation « Configuration d’un cloud d’entreprise avec OpenStack » ([jours 1](jour-1.md), [2](jour-2.md) et [3](jour-3.md), 28/10/2026).**

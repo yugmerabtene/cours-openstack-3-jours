@@ -6,7 +6,7 @@
 
 **Scénario unique pour ce support : l’apprenant crée intégralement sa VM de A à Z.** Créer vous-même la machine virtuelle `lab-openstack` sous Windows avec Oracle VirtualBox 7.x, installer Ubuntu Server 24.04.5 LTS, configurer le réseau **NAT + Host-Only**, créer l’utilisateur `stack`, puis installer DevStack `stable/2026.1`. Tous les LAB, exercices et vérifications se font dans cette VM, de bout en bout, depuis le navigateur Windows pour accéder à Horizon. **Aucune VM n’est fournie.** Prévoir plusieurs heures pour la création et l’installation (`stack.sh` prend 30 à 90 minutes). Il est normal que l’installation se termine en fin de journée.
 
-Ce préambule se traite en amont de S1. Chaque bloc précise s’il s’exécute sur la machine hôte (Windows + VirtualBox) ou dans la VM.
+Ce préambule se traite en amont de [S1](#j1-s1). Chaque bloc précise s’il s’exécute sur la machine hôte (Windows + VirtualBox) ou dans la VM.
 
 **Identifiants du laboratoire.** La valeur `lab123` est utilisée pour tous les comptes de ce laboratoire. Elle n’a aucun rapport avec un mot de passe d’entreprise et ne doit pas être réutilisée en dehors de ce cadre.
 
@@ -77,7 +77,7 @@ sudo netplan apply
 ip -br address
 ```
 
-10. **Vérifier la connectivité** — Depuis Windows (invite de commandes) : `ipconfig` (l’interface host-only doit porter `192.168.56.1`), puis `ping -n 4 192.168.56.10` (`-n` sous Windows, `-c` sous Linux). Depuis la VM : `ip route | grep default` (passerelle NAT présente), `resolvectl status` (DNS), `ping -c 2 8.8.8.8`. Si `ping 8.8.8.8` échoue alors que la passerelle existe, corriger le DNS via `netplan` (`nameservers: addresses: [8.8.8.8, 1.1.1.1]`). Si SSH n’est pas actif : `sudo apt install -y openssh-server` puis `sudo systemctl enable --now ssh`.
+10. **Vérifier la connectivité** — Depuis Windows (invite de commandes) : `ipconfig` (l’interface host-only doit porter `192.168.56.1`), puis `ping -n 4 192.168.56.10` (`-n` sous Windows, `-c` sous Linux). Depuis la VM : `ip route | grep default` (passerelle NAT présente), `resolvectl status` (DNS), `ping -c 2 8.8.8.8` (connectivité IP), puis `getent hosts openstack.org` (résolution de noms). Si `ping 8.8.8.8` échoue alors que la passerelle existe, contrôler le NAT VirtualBox et la route par défaut de la VM. Si l’IP répond mais que `getent hosts` échoue, corriger le DNS via `netplan` (`nameservers: addresses: [8.8.8.8, 1.1.1.1]`). Si SSH n’est pas actif : `sudo apt install -y openssh-server` puis `sudo systemctl enable --now ssh`.
 
 > **Vérification Internet** : NIC1 en NAT donne un accès sortant à la VM pour `apt update`, téléchargement de DevStack et mise à jour des paquets. NIC2 en Host-Only permet l’accès depuis le navigateur Windows vers `http://192.168.56.10/dashboard`. DevStack utilisera `HOST_IP=192.168.56.10` et configurera Neutron avec un routeur pour donner Internet aux instances via SNAT.
 
@@ -125,7 +125,7 @@ L'interface `VirtualBox Host-Only Ethernet Adapter` doit apparaître avec l'IP `
 - [ ] Interfaces vérifiées dans la VM : `ip link` et `ip -br address`. Identifier `enp0s3` (NAT/DHCP) et `enp0s8` (host-only) avant configuration.
 - [ ] Réseau configuré avec `netplan` : `enp0s3` DHCP, `enp0s8` statique `192.168.56.10/24` (sans gateway). Appliquer `sudo netplan apply`, `chmod 600` sur le YAML.
 - [ ] Depuis Windows : `ping -n 4 192.168.56.10` répond (utiliser `-n`, pas `-c`). `VBoxManage` utilisable avec chemin complet si absent du PATH.
-- [ ] Depuis la VM : `ip route | grep default` (passerelle NAT), `resolvectl status` (DNS), `ping -c 2 8.8.8.8` répond. L’accès à Horizon sera vérifié après l’installation de DevStack (J1S2).
+- [ ] Depuis la VM : `ip route | grep default` (passerelle NAT), `resolvectl status` (DNS), `ping -c 2 8.8.8.8` répond et `getent hosts openstack.org` résout un nom. L’accès à Horizon sera vérifié après l’installation de DevStack ([J1S2](#lab-j1s2--installation-mise-en-service-et-vérification-du-cloud)).
 
 <a id="j1-ex-0-2"></a>
 
@@ -133,7 +133,7 @@ L'interface `VirtualBox Host-Only Ethernet Adapter` doit apparaître avec l'IP `
 
 ```text
 # Côté machine hôte (VM éteinte) : activer la virtualisation imbriquée
-& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "ubuntu" --nested-hw-virt on
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "lab-openstack" --nested-hw-virt on
 # modifyvm : modifie les paramètres de la VM
 # --nested-hw-virt on : autorise VT-x/AMD-V à l'intérieur de la VM
 ```
@@ -195,8 +195,10 @@ REM vérifier que l’interface "VirtualBox Host-Only Ethernet Adapter" porte 19
 ping -n 4 192.168.56.10
 REM -n 4 : quatre paquets puis arrêt (Windows ; -c est l’option Linux)
 REM quatre réponses = adaptateur host-only configuré
-REM en cas d’échec : vérifier enp0s8 dans la VM, voir « Réseau du laboratoire »
+REM en cas d’échec : vérifier enp0s8 dans la VM (voir la note ci-dessous)
 ```
+
+> Le détail des adresses et des adaptateurs est dans [Réseau du laboratoire](#j1-reseau-laboratoire), plus bas.
 
 ```bash
 # Connexion à la VM avec le compte de laboratoire
@@ -280,11 +282,12 @@ Les quatre contrôles passés, le laboratoire est défini : VM `lab-openstack` j
 | — | 12h00-13h00 | Pause déjeuner | 1 h |
 | S2 | 13h00-13h45 | Carte des services : Keystone, Nova, Neutron, Glance, Cinder, Swift, Horizon, Placement | 45 min |
 | S2 | 13h45-14h15 | Cas d’usage en entreprise et parcours visuel d’Horizon | 30 min |
-| S2 | 14h15-14h45 | Installation et mise en service de DevStack (lab) | 30 min |
-| S2 | 14h45-15h30 | Comprendre l’installation : `local.conf` et `stack.sh` (lab) | 45 min |
+| S2 | 14h15-15h30 | Installation de DevStack (lab) et relecture guidée de `local.conf`/`stack.sh` pendant l’exécution | 75 min |
 | S2 | 15h30-16h00 | Vérification finale et synthèse | 30 min |
 
 ---
+
+<a id="j1-s1"></a>
 
 ## S1 — Concepts fondamentaux du Cloud privé et présentation d’OpenStack (09h00-12h00)
 
@@ -489,12 +492,12 @@ Le public de cette formation a souvent rencontré VMware vSphere ou Microsoft Hy
 
 ### Mapping Sécurité
 
-Référentiel principal : **CIS Benchmark for OpenStack** (identifiants de contrôle à confirmer sur la version du benchmark retenue).
+Référentiel : principes des **CIS Benchmarks** (cloud et Ubuntu), transposés à OpenStack. Il n’existe pas de benchmark CIS OpenStack dédié ; les correspondances ci-dessous sont pédagogiques et ne citent pas d’identifiants CIS officiels.
 
-| Référence | ID | Description |
-|-----------|----|-------------|
-| CIS OpenStack — Vue d’ensemble | Domaine « architecture et surface d’attaque » | Cartographier les services exposés, les points d’accès et les rôles avant tout déploiement |
-| CIS OpenStack — Gestion des identités | Domaine « comptes et autorisations » | Définir qui existe, sous quel rôle, avec quels droits sur quel projet |
+| Référence | Domaine | Description |
+|-----------|---------|-------------|
+| CIS (transposé) — Vue d’ensemble | Domaine « architecture et surface d’attaque » | Cartographier les services exposés, les points d’accès et les rôles avant tout déploiement |
+| CIS (transposé) — Gestion des identités | Domaine « comptes et autorisations » | Définir qui existe, sous quel rôle, avec quels droits sur quel projet |
 
 > **Pourquoi mapper la sécurité dès la phase conceptuelle ?** — Les décisions prises dans l’analyse des besoins (nombre de projets, isolation, nature des données) déterminent la surface d’attaque future. Un besoin formulé sans notion d’identité et d’isolation produira une plateforme où tous les comptes voient tout : la note est le premier document de sécurité de la formation.
 
@@ -698,9 +701,9 @@ Attendu pour ce cas : **Cloud privé**, justifié par la sensibilité des donné
 | Contrôle | Référence | Description |
 |----------|-----------|-------------|
 | Analyse documentée | Méthode — cadrage | Une note unique, versionnée, faisant foi de besoin pour tout le projet |
-| Identification des acteurs | CIS OpenStack — Gestion des identités | Nommer utilisateurs, équipes et projets avant de construire l’infrastructure |
-| Qualification des données | CIS OpenStack — Vue d’ensemble | Classer les données (sensibles ou non) avant de choisir le stockage |
-| Isolation exprimée comme exigence | CIS OpenStack — Vue d’ensemble | L’isolation entre directions est une exigence, pas une option de dernière minute |
+| Identification des acteurs | CIS (transposé) — Gestion des identités | Nommer utilisateurs, équipes et projets avant de construire l’infrastructure |
+| Qualification des données | CIS (transposé) — Vue d’ensemble | Classer les données (sensibles ou non) avant de choisir le stockage |
+| Isolation exprimée comme exigence | CIS (transposé) — Vue d’ensemble | L’isolation entre directions est une exigence, pas une option de dernière minute |
 | Hypothèses explicites | Méthode — cadrage | Toute hypothèse de dimensionnement est écrite et reprise au [jour 3](jour-3.md) |
 
 > **Bonnes pratiques** — Conservez `note-besoins-cloud-prive.md` sous version de contrôle (un simple dépôt `git init` dans `~/formation-openstack/` suffit) : au [jour 3](jour-3.md), les décisions de dimensionnement devront être relues côte à côte avec cette note, et toute divergence devra être justifiée. Une note modifiée sans trace perd sa valeur de référence.
@@ -743,6 +746,8 @@ Un classement cohérent avec le cas :
 > - La note d’analyse des besoins (`note-besoins-cloud-prive.md`) conditionne le dimensionnement du [jour 3](jour-3.md) : besoin, exigence technique, ressource, commande.
 > - OpenStack est un ensemble de microservices à API REST, gouverné par l’Open Infrastructure Foundation, publié en deux versions par an ; la branche `stable/2026.1` (Gazpacho) est celle du laboratoire.
 > - Kubernetes n’est pas un concurrent d’OpenStack : il orchestre des conteneurs, là où OpenStack fournit l’infrastructure.
+
+<a id="j1-s2"></a>
 
 ## S2 — Carte des services OpenStack et mise en service du cloud (13h00-16h00)
 
@@ -869,11 +874,13 @@ Le laboratoire tient dans **une machine virtuelle unique**, sur un poste portabl
 
 | Ressource | Configuration | Justification |
 |-----------|---------------|---------------|
-| Mémoire vive | 10 Go attribués à la VM sur un hôte 16 Go (6 Go en scénario B ; 12-14 Go si l’hôte dispose de 32 Go) | MySQL, RabbitMQ, une dizaine de services Python, OVN, Cinder et une à deux instances `m1.tiny` cohabitent ; sur 6 Go, prévoir 4 Go de swap et surveiller `free -h` (voir le « Repère pratique » du jour 3) |
+| Mémoire vive | 10 Go attribués à la VM sur un hôte 16 Go (6 Go en scénario B ; 12-14 Go si l’hôte dispose de 32 Go) | MySQL, RabbitMQ, une dizaine de services Python, OVN, Cinder et une à deux instances `m1.tiny` cohabitent ; sur 6 Go, prévoir 4 Go de swap et surveiller `free -h` (voir le [« Repère pratique » du jour 3](jour-3.md#j3-repere-pratique)) |
 | Processeur | 3 vCPU (4 si l’hôte est dédié) | Parallélise l’installation et l’exécution des instances sans affamer Windows sur un hôte 4c/4T |
 | Disque virtuel | 60 à 80 Go, alloué dynamiquement | Code source et environnements Python : environ 10 Go ; volume LVM de Cinder : 30 Go (fichier creux) ; Swift : 2 Go (6 Go avec `tempest`, activé par défaut) ; marges pour images et journaux |
 | Réseau | 2 adaptateurs : NAT (Internet) + host-only (gestion) | Aucun port entrant public n’est requis |
 | Système | Ubuntu Server 24.04 LTS | Cible validée par DevStack et par les outils de déploiement |
+
+<a id="j1-reseau-laboratoire"></a>
 
 **Réseau du laboratoire :**
 
@@ -952,7 +959,7 @@ kvm-ok
 | **C — 16 Go / 2 cœurs** | 16 Go / 2c/4T | 2 / 10-12 Go / 60-80 Go | Complets | 1 | Installation plus longue, exécution lente |
 | **D — binôme** | — | 1 VM partagée | Complets | 1 à 2 | Deux apprenants par VM, partage d’écran |
 
-> **Repère mémoire** — Pour ce lab, allouer **3 vCPU et 10 Go de RAM** à la VM `lab-openstack` sur un hôte 16 Go/4c/4T (4 vCPU et 12-14 Go seulement si l’hôte est dédié ou dispose de 32 Go). Avec 10 Go, une à deux instances `m1.tiny` tiennent ; en scénario B (6 Go/2 vCPU), se limiter à une instance et surveiller `free -h` (voir [jour 3](jour-3.md), « Repère pratique »). `tempest` et Swift peuvent être activés, mais consomment de la mémoire.
+> **Repère mémoire** — Pour ce lab, allouer **3 vCPU et 10 Go de RAM** à la VM `lab-openstack` sur un hôte 16 Go/4c/4T (4 vCPU et 12-14 Go seulement si l’hôte est dédié ou dispose de 32 Go). Avec 10 Go, une à deux instances `m1.tiny` tiennent ; en scénario B (6 Go/2 vCPU), se limiter à une instance et surveiller `free -h` (voir le [« Repère pratique » du jour 3](jour-3.md#j3-repere-pratique)). `tempest` et Swift peuvent être activés, mais consomment de la mémoire.
 
 > **Bonnes pratiques (ressources limitées)** — Mode minimal (scénario B) : ajouter 4 Go de swap, ne pas activer Swift, se limiter à une instance `m1.tiny` et désactiver les services non essentiels (`tempest` pour les tests d’acceptation, `dstat` pour l’agent de métriques) dans `local.conf`. Le binôme (scénario D) est la solution la plus robuste sur des postes à 8 Go : une VM, deux apprenants, aucun compromis sur la configuration.
 
@@ -1231,10 +1238,10 @@ curl -I http://192.168.56.10/dashboard/
 
 ### Mapping Sécurité
 
-| Référence | ID | Description |
-|-----------|----|-------------|
-| CIS OpenStack — Keystone (comptes et mots de passe) | Domaine « gestion des identités » | Mots de passe de service forts (alphanumériques ici) et comptes nominatifs ; interdiction de partager le compte administrateur |
-| CIS OpenStack — Horizon | Domaine « tableau de bord » | Exposition limitée de l’interface d’administration, restriction réseau, terminaison TLS en production |
+| Référence | Domaine | Description |
+|-----------|---------|-------------|
+| CIS (transposé) — Keystone (comptes et mots de passe) | Domaine « gestion des identités » | Mots de passe de service forts (alphanumériques ici) et comptes nominatifs ; interdiction de partager le compte administrateur |
+| CIS (transposé) — Horizon | Domaine « tableau de bord » | Exposition limitée de l’interface d’administration, restriction réseau, terminaison TLS en production |
 
 > **Pourquoi ce mapping concerne-t-il une installation de laboratoire ?** — Les réflexes se forment à la première installation : mot de passe copié dans un dépôt, compte administrateur partagé, interface ouverte sur un réseau trop large. Le laboratoire impose des contraintes réalistes (aucun port entrant public, réseau de gestion distinct, mots de passe dédiés) pour que ces réflexes soient les bons le jour de la mise en production.
 
@@ -1251,7 +1258,7 @@ curl -I http://192.168.56.10/dashboard/
 | Compte de la VM | `stack` / `lab123` (jamais `root`), déjà créé et vérifié au préambule |
 | Identifiants OpenStack | `admin` / `lab123`, `demo` / `lab123` ; `ENCRYPTION_PASS=lab123` |
 | Livrables | Cloud vérifié et opérationnel ; `/opt/stack/devstack/local.conf` lu et compris ; fichier `openrc` fourni par DevStack |
-| Durée | 30 min de mise en service et vérification (14h15-14h45) + 45 min de relecture de l’installation (14h45-15h30) |
+| Durée | Créneau de 75 min pour l’installation et la relecture (14h15-15h30), puis 30 min de vérification (15h30-16h00) ; `stack.sh` dure 30 à 90 min et peut déborder après 16h00 |
 
 **Replis en cas de ressources limitées (à appliquer avant de commencer) :**
 
@@ -1577,8 +1584,8 @@ Après correction, relancer simplement `./stack.sh` : DevStack reprend la config
 | Contrôle | Référence | Description |
 |----------|-----------|-------------|
 | Exécution hors `root` | DevStack (documentation) | `stack.sh` exécuté avec l’utilisateur `stack`, compte dédié et jetable |
-| Mots de passe de service | CIS OpenStack — Keystone (comptes et mots de passe) | Caractères alphanumériques, valeurs propres au laboratoire, jamais réutilisées ailleurs |
-| Exposition d’Horizon | CIS OpenStack — Horizon | Accès uniquement par le réseau host-only ; aucun port entrant public, service en HTTP en lab (TLS : option de durcissement au [jour 3](jour-3.md)) |
+| Mots de passe de service | CIS (transposé) — Keystone (comptes et mots de passe) | Caractères alphanumériques, valeurs propres au laboratoire, jamais réutilisées ailleurs |
+| Exposition d’Horizon | CIS (transposé) — Horizon | Accès uniquement par le réseau host-only ; aucun port entrant public, service en HTTP en lab (TLS : option de durcissement au [jour 3](jour-3.md)) |
 | Configuration centralisée | DevStack (documentation) | Tout réglage passe par `local.conf`, relu à chaque exécution ; aucun fichier généré modifié à la main |
 | Journalisation d’installation | — | `LOGFILE=/opt/stack/logs/stack.sh.log` conservé pour le diagnostic et la reprise |
 | Branche figée | Méthode — reproductibilité | `stable/2026.1` identique sur tous les postes, testée avant la session |
@@ -1666,13 +1673,15 @@ flowchart LR
 
 ## Mémo — Commandes Essentielles
 
-```bash
+```powershell
 # ----- Vérification depuis machine hôte Windows (AVANT DevStack) -----
 ipconfig | findstr "VirtualBox"          # vérifier interface host-only (doit avoir 192.168.56.1)
 ping -n 4 192.168.56.10                  # test connectivité VM (4 réponses attendues)
 Test-NetConnection 192.168.56.10 -Port 80 # test accès HTTP (PowerShell) — TcpTestSucceeded doit être True
-curl -I http://192.168.56.10/dashboard   # test Horizon depuis cmd/PowerShell
+curl.exe -I http://192.168.56.10/dashboard # test Horizon ; curl.exe, pas l’alias PowerShell
+```
 
+```bash
 # ----- Accès au laboratoire (VM lab-openstack créée sous Windows + VirtualBox, NAT + Host-Only) -----
 ssh stack@192.168.56.10                  # accès SSH : compte stack, mot de passe lab123
 export ENCRYPTION_PASS=lab123            # phrase secrète de chiffrement (à réexporter
@@ -1724,7 +1733,7 @@ ls -l /dev/kvm ; kvm-ok                   # virtualisation imbriquée (kvm-ok : 
 | Ubuntu Server LTS | 24.04 (Noble) | Système de la machine virtuelle |
 | DevStack | `stable/2026.1` (Gazpacho) | Installation du cloud en nœud unique |
 | OpenStack CLI | `openstack` (python-openstackclient) | Commande de gestion et de vérification |
-| KVM / QEMU | intégrés au noyau Ubuntu | Hyperviseur des instances (imbriqué ou émulé) |
+| KVM / QEMU | KVM : module du noyau Linux ; QEMU : émulateur en espace utilisateur | Hyperviseur des instances (KVM imbriqué ou QEMU émulé) |
 | VirtualBox ou VMware | version courante | Hyperviseur de la machine virtuelle du laboratoire |
 | OVN | fourni par DevStack | Moteur réseau logique de Neutron |
 
@@ -1739,5 +1748,5 @@ ls -l /dev/kvm ; kvm-ok                   # virtualisation imbriquée (kvm-ok : 
 | Notices de version 2026.1 | <https://releases.openstack.org/gazpacho/> |
 | Open Infrastructure Foundation | <https://openinfra.org/> |
 | Référence NIST du Cloud (SP 800-145) | <https://csrc.nist.gov/pubs/sp/800/145/final> |
-| CIS Benchmarks (dont OpenStack) | <https://www.cisecurity.org/benchmarks> |
+| CIS Benchmarks (cloud et OS ; pas de benchmark OpenStack dédié) | <https://www.cisecurity.org/benchmarks> |
 | Documentation de VirtualBox (virtualisation imbriquée) | <https://www.virtualbox.org/manual/> |
