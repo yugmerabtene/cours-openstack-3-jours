@@ -244,7 +244,7 @@ Les quatre contrôles passés, le laboratoire est défini : VM `lab-openstack` j
 
 ---
 
-**Fil conducteur :** Le matin, l’analyse des besoins d’un cas d’entreprise produit une note, `note-besoins-cloud-prive.md`, qui servira de référence au dimensionnement du jour 3. L’après-midi, on poursuit avec la carte des services, puis on installe et met en service DevStack `stable/2026.1` dans la VM `lab-openstack` créée sous Windows + VirtualBox (NAT + Host-Only). On vérifie l’accès à Horizon depuis Windows et l’accès Internet de la VM. Ce cloud sert sans interruption aux jours 2 et 3.
+**Fil conducteur :** l’analyse des besoins d’un cas d’entreprise produit une note, `note-besoins-cloud-prive.md`, qui servira de référence au dimensionnement du jour 3. L’après-midi, on poursuit avec la carte des services, puis on installe et met en service DevStack `stable/2026.1` dans la VM `lab-openstack` créée sous Windows + VirtualBox (NAT + Host-Only). On vérifie l’accès à Horizon depuis Windows et l’accès Internet de la VM. Ce cloud sert sans interruption aux jours 2 et 3.
 
 ---
 
