@@ -2,7 +2,6 @@
 
 ![Architecture OpenStack](images/openstack-architecture.webp)
 
-
 ## Principe de l'architecture microservices
 
 Une architecture monolithique regroupe les fonctions dans un seul déploiement. Une architecture microservices découpe le système en services indépendants, chacun avec une responsabilité délimitée et une API. Dans OpenStack, cela se traduit par un service par domaine (Nova, Neutron, Cinder, etc.), avec sa propre base de données et, le plus souvent, sa propre file de messages.
