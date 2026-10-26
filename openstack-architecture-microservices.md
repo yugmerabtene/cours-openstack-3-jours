@@ -1,14 +1,12 @@
 # Dans les coulisses de l'architecture microservices d'OpenStack
 
-![OpenStack Microservice Architecture](images/openstack-microservice-architecture.webp)
+![Architecture OpenStack](images/openstack-architecture.webp)
 
-![OpenStack Architecture](images/openstack-architecture.webp)
+Le schéma ci-dessous cartographie les services OpenStack par domaine fonctionnel. En haut figurent les interfaces web (Horizon, Skyline). Au centre, le provisionnement des charges de travail regroupe l'orchestration (Heat, Mistral, Aodh, Blazar, Zaqar), le cycle de vie applicatif (Trove, Magnum, Masakari) et le calcul (Nova pour les VM, Zun pour les conteneurs). Le stockage est séparé en trois plans : bloc (Cinder), objet (Swift) et fichier (Manila). Le réseau réunit le SDN (Neutron), la répartition de charge (Octavia) et le DNS (Designate), tandis que le cycle de vie matériel couvre le bare metal (Ironic) et les accélérateurs (Cyborg). En bas, les services partagés — Keystone (identité), Barbican (secrets), Glance (images) et Placement (ordonnancement) — sont transverses à tous les autres services.
 
 OpenStack est devenu l'une des plateformes cloud open source les plus puissantes et les plus flexibles disponibles aujourd'hui. OpenStack offre un cadre modulaire et évolutif pour bâtir des clouds privés, publics et hybrides, avec beaucoup d'innovation et de flexibilité. Son architecture modulaire, fondée sur les microservices, est l'une des principales raisons de son évolutivité, de sa flexibilité et de son adoption massive par les entreprises et les fournisseurs de services.
 
-Dans cet article, nous portons un regard neuf sur les composants essentiels de l'architecture microservices d'OpenStack, sur la manière dont ils interagissent et sur les raisons pour lesquelles cette conception est indispensable aux environnements cloud modernes.
-
-Si vous débutez avec OpenStack, vous voudrez peut-être commencer par notre guide d'introduction de la série OpenStack.
+Dans ce document, nous portons un regard neuf sur les composants essentiels de l'architecture microservices d'OpenStack, sur la manière dont ils interagissent et sur les raisons pour lesquelles cette conception est indispensable aux environnements cloud modernes.
 
 ## Qu'est-ce qu'une architecture microservices ?
 
@@ -172,11 +170,46 @@ Bien que Swift soit l'un des premiers composants d'OpenStack et qu'il soit prêt
 - Redondance et durabilité des données
 - Accès via API RESTful
 
+## Autres services représentés sur le schéma
+
+### Interfaces web et orchestration
+
+- **Skyline** : tableau de bord web moderne, alternative à Horizon, avec API REST et interface Python.
+- **Mistral** : service de workflows (Workflow-as-a-Service) pour exécuter des tâches asynchrones et des processus métier.
+- **Aodh** : service d'alertes basé sur les métriques de télémétrie ; déclenche des actions comme l'auto-scaling ou l'orchestration.
+- **Blazar** : réservation de ressources (calcul, stockage) pour garantir la capacité sur un créneau donné.
+- **Zaqar** : messagerie multi-tenant (files et notifications) exposée via une API REST.
+
+### Cycle de vie applicatif
+
+- **Trove** : Database-as-a-Service ; provisionne et gère des instances de bases de données.
+- **Magnum** : Container-as-a-Service ; déploie des clusters Kubernetes, Swarm ou Mesos sur OpenStack.
+- **Masakari** : haute disponibilité ; détecte les pannes d'hôtes et récupère les instances par évacuation.
+
+### Stockage et conteneurs
+
+- **Manila** : stockage de fichiers partagés (NFS, CIFS) avec plusieurs backends.
+- **Zun** : gestion de conteneurs sans orchestrateur externe, intégrée à Nova, Neutron et Cinder.
+
+### Réseau
+
+- **Octavia** : Load-Balancing-as-a-Service (LBaaS) basé sur des Amphora, piloté par API REST.
+- **Designate** : DNS-as-a-Service ; gère les zones et enregistrements DNS, intégré à Neutron.
+
+### Cycle de vie matériel
+
+- **Ironic** : Bare Metal-as-a-Service ; provisionne des serveurs physiques via PXE, IPMI ou Redfish.
+- **Cyborg** : gestion et allocation des accélérateurs matériels (GPU, FPGA, ASIC) aux instances.
+
+### Services partagés
+
+- **Placement** : suivi des inventaires et des allocations de ressources (vCPU, RAM, disque), utilisé par Nova pour l'ordonnancement.
+
 ## Comment ces services fonctionnent ensemble
 
 Chaque service OpenStack communique via des API HTTP REST, et la plupart des services utilisent des files d'attente AMQP basées sur RabbitMQ pour la communication au sein d'un même service. Une base de données MySQL ou compatible est nécessaire pour conserver les informations persistantes sur l'état du cloud, telles que les noms de projets, les utilisateurs, les rôles, les noms de machines virtuelles, les plages d'adresses IP réseau, etc. Ce couplage lâche est ce qui permet à OpenStack de fonctionner comme une plateforme basée sur les microservices. Schématiquement, cette architecture est représentée sur le diagramme ci-dessous :
 
-![OpenStack Microservice Architecture Cloudification](images/openstack-microservice-diagram.webp)
+![Architecture microservices d'OpenStack](images/openstack-microservice-diagram.webp)
 
 *Architecture microservices d'OpenStack*
 
