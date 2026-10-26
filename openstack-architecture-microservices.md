@@ -2,12 +2,6 @@
 
 ![OpenStack Microservice Architecture](images/openstack-microservice-architecture.webp)
 
-**Catégories :** Open Source · OpenStack  
-**Publié le :** 27 mai 2024
-
-**Rédigé par :** Thzuska Pico  
-**Relu par :** Dmitry Galkin
-
 ![OpenStack Architecture](images/openstack-architecture.webp)
 
 OpenStack est devenu l'une des plateformes cloud open source les plus puissantes et les plus flexibles disponibles aujourd'hui. OpenStack offre un cadre modulaire et évolutif pour bâtir des clouds privés, publics et hybrides, avec beaucoup d'innovation et de flexibilité. Son architecture modulaire, fondée sur les microservices, est l'une des principales raisons de son évolutivité, de sa flexibilité et de son adoption massive par les entreprises et les fournisseurs de services.
