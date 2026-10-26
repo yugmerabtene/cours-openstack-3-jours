@@ -181,6 +181,38 @@ Swift assure la durabilité par réplication ou erasure coding, la tolérance au
 
 - **Placement** : suivi des inventaires et des allocations de ressources (vCPU, RAM, disque), utilisé par Nova pour l'ordonnancement.
 
+## Services complémentaires
+
+Ces services n'apparaissent pas sur les schémas précédents. Ils complètent la plateforme selon les besoins d'exploitation.
+
+### Supervision et télémétrie
+
+- **Ceilometer** : collecte les métriques et événements des services (notifications, agents) et alimente Aodh et Gnocchi.
+- **Gnocchi** : stocke et agrège les séries temporelles de métriques.
+- **Monasca** : supervision et alerting (métriques et journaux), alternative ou complément à Ceilometer.
+- **Vitrage** : analyse de cause racine et corrélation d'événements sur l'infrastructure.
+
+### Exploitation et gouvernance
+
+- **Watcher** : optimisation des ressources (consolidation, migration) via des audits et des plans d'action.
+- **Senlin** : gestion de clusters homogènes (création, mise à l'échelle, politiques) au-dessus de Nova et Heat.
+- **Congress** : moteur de politiques déclaratives (policy-as-a-service) appliquées aux services cloud.
+- **CloudKitty** : mesure et tarification (rating) des ressources pour la facturation.
+- **Freezer** : sauvegarde et restauration de données et de volumes.
+- **Adjutant** : workflows de provisioning et de gestion des utilisateurs et des projets.
+
+### Applications, données et NFV
+
+- **Sahara** : provisionnement de clusters Hadoop et Spark.
+- **Qinling** : exécution de fonctions (FaaS) sur OpenStack.
+- **Murano** : catalogue d'applications et déploiement d'environnements applicatifs.
+- **Tacker** : orchestration NFV (VNF, descripteurs VNFD, MANO).
+
+### Outillage
+
+- **Rally** : benchmark et tests de performance de la plateforme.
+- **Tempest** : framework de tests fonctionnels des API OpenStack.
+
 ## Interaction des services
 
 Les services communiquent par API HTTP REST. Au sein d'un service, les composants échangent via une file AMQP (RabbitMQ). Chaque service possède sa propre base de données (MySQL/MariaDB ou autre) et ne partage pas son schéma. Ce couplage faible permet des déploiements et des montées en version indépendants.
@@ -188,6 +220,34 @@ Les services communiquent par API HTTP REST. Au sein d'un service, les composant
 ![Architecture microservices d'OpenStack](images/openstack-microservice-diagram.webp)
 
 *Architecture microservices d'OpenStack*
+
+## Composants internes des services
+
+Les processus internes ne sont pas exposés aux utilisateurs, mais portent l'implémentation de chaque service.
+
+| Service | Composant | Rôle |
+|---|---|---|
+| Nova | `nova-api` | Point d'entrée REST, validation des requêtes |
+| Nova | `nova-scheduler` | Sélection de l'hôte selon les filtres et Placement |
+| Nova | `nova-conductor` | Médiation avec la base de données, isolation des accès |
+| Nova | `nova-compute` | Cycle de vie des instances via libvirt/KVM sur l'hôte |
+| Nova | `nova-console-proxy` | Proxy des consoles VNC, SPICE et série |
+| Nova | `nova-consoleauth` | Authentification des consoles (obsolète sur les versions récentes) |
+| Neutron | `neutron-server` | API REST, chargement des plugins (ML2) |
+| Neutron | agents (OVN/OVS, DHCP, metadata, L3) | Application de la configuration réseau sur les nœuds |
+| Cinder | `cinder-api` | Point d'entrée REST |
+| Cinder | `cinder-scheduler` | Sélection du backend de stockage |
+| Cinder | `cinder-volume` | Gestion des volumes sur le backend via driver |
+| Cinder | `cinder-backup` | Sauvegarde des volumes vers un backend |
+| Glance | `glance-api` | API REST, accès aux images et métadonnées |
+| Swift | `swift-proxy` | Point d'entrée API et routage des requêtes |
+| Swift | `account`, `container`, `object` servers | Métadonnées et données, distribution par rings |
+| Keystone | `keystone` (service et admin) | Endpoints d'identité et d'administration |
+| Keystone | backends `token`, `catalog`, `policy`, identité | Jetons, catalogue, règles RBAC, annuaire (SQL/LDAP) |
+| Infrastructure | RabbitMQ (AMQP) | Files de messages par service |
+| Infrastructure | MySQL/MariaDB | Base de données propre à chaque service |
+| Infrastructure | libvirt | Abstraction des hyperviseurs pour Nova |
+| Infrastructure | Ceph RBD | Backend bloc pour Cinder, Glance et Nova |
 
 ## Scénario : création d'une instance
 
