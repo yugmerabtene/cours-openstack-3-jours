@@ -1,35 +1,24 @@
-# Dans les coulisses de l'architecture microservices d'OpenStack
+# Architecture microservices d'OpenStack
 
 ![Architecture OpenStack](images/openstack-architecture.webp)
 
-Le schéma ci-dessous cartographie les services OpenStack par domaine fonctionnel. En haut figurent les interfaces web (Horizon, Skyline). Au centre, le provisionnement des charges de travail regroupe l'orchestration (Heat, Mistral, Aodh, Blazar, Zaqar), le cycle de vie applicatif (Trove, Magnum, Masakari) et le calcul (Nova pour les VM, Zun pour les conteneurs). Le stockage est séparé en trois plans : bloc (Cinder), objet (Swift) et fichier (Manila). Le réseau réunit le SDN (Neutron), la répartition de charge (Octavia) et le DNS (Designate), tandis que le cycle de vie matériel couvre le bare metal (Ironic) et les accélérateurs (Cyborg). En bas, les services partagés — Keystone (identité), Barbican (secrets), Glance (images) et Placement (ordonnancement) — sont transverses à tous les autres services.
+Le schéma ci-dessus cartographie les services OpenStack par domaine fonctionnel. En haut figurent les interfaces web (Horizon, Skyline). Au centre, le provisionnement des charges de travail regroupe l'orchestration (Heat, Mistral, Aodh, Blazar, Zaqar), le cycle de vie applicatif (Trove, Magnum, Masakari) et le calcul (Nova pour les VM, Zun pour les conteneurs). Le stockage est séparé en trois plans : bloc (Cinder), objet (Swift) et fichier (Manila). Le réseau réunit le SDN (Neutron), la répartition de charge (Octavia) et le DNS (Designate), tandis que le cycle de vie matériel couvre le bare metal (Ironic) et les accélérateurs (Cyborg). En bas, les services partagés — Keystone (identité), Barbican (secrets), Glance (images) et Placement (ordonnancement) — sont transverses à tous les autres services.
 
-OpenStack est devenu l'une des plateformes cloud open source les plus puissantes et les plus flexibles disponibles aujourd'hui. OpenStack offre un cadre modulaire et évolutif pour bâtir des clouds privés, publics et hybrides, avec beaucoup d'innovation et de flexibilité. Son architecture modulaire, fondée sur les microservices, est l'une des principales raisons de son évolutivité, de sa flexibilité et de son adoption massive par les entreprises et les fournisseurs de services.
+OpenStack est une plateforme cloud open source composée de services autonomes. Chaque service expose une API HTTP REST et couvre un domaine fonctionnel : calcul, réseau, stockage, identité, images ou orchestration. L'assemblage de ces services fournit une infrastructure cloud de type IaaS. Ce document décrit les composants principaux, leur rôle et leur interaction lors du provisionnement d'une instance.
 
-Dans ce document, nous portons un regard neuf sur les composants essentiels de l'architecture microservices d'OpenStack, sur la manière dont ils interagissent et sur les raisons pour lesquelles cette conception est indispensable aux environnements cloud modernes.
+## Principe de l'architecture microservices
 
-## Qu'est-ce qu'une architecture microservices ?
+Une architecture monolithique regroupe les fonctions dans un seul déploiement. Une architecture microservices découpe le système en services indépendants, chacun avec une responsabilité délimitée et une API. Dans OpenStack, cela se traduit par un service par domaine (Nova, Neutron, Cinder, etc.), avec sa propre base de données et, le plus souvent, sa propre file de messages.
 
-Imaginez que vous essayiez de gérer une ville entière depuis une seule salle de contrôle. Chaque décision — les feux de circulation, l'électricité, l'approvisionnement en eau — dépendrait d'un système massif et centralisé. Si quelque chose se passe mal, tout s'effondre avec lui. C'est essentiellement ainsi que fonctionnent les architectures **monolithiques** traditionnelles.
+Chaque service peut être déployé, mis à jour et mis à l'échelle indépendamment. En contrepartie, l'architecture introduit des dépendances réseau, de la latence entre appels API, une complexité de déploiement et la nécessité d'une observabilité distribuée.
 
-L'architecture microservices adopte une approche très différente. Au lieu de construire un grand système étroitement connecté, elle décompose le tout en services plus petits et indépendants. Chacun de ces services a une responsabilité claire et communique avec les autres via des API. Voyez cela plutôt comme une ville bien organisée où chaque service — transport, services publics, urgences — fonctionne de manière indépendante mais collabore lorsque c'est nécessaire.
+## Propriétés et compromis
 
-Cette indépendance est ce qui rend les microservices si puissants. Chaque service peut être développé, mis à jour, déployé et mis à l'échelle selon son propre calendrier, sans perturber le reste du système. Les équipes peuvent travailler en parallèle, les améliorations peuvent être déployées plus rapidement et les incidents peuvent être mieux contenus.
-
-Dans le contexte d'OpenStack, cela signifie qu'au lieu d'un seul moteur cloud géant, OpenStack fonctionne comme une collection de services spécialisés. Chaque fonctionnalité essentielle — calcul, réseau, stockage, identité, etc. — est prise en charge par son propre service dédié. Chaque service se concentre sur une tâche qu'il accomplit bien, tandis que les API relient le tout pour former une plateforme cloud cohérente.
-
-## Pourquoi l'architecture microservices est-elle importante ?
-
-Une architecture microservices a un impact direct sur le comportement de votre infrastructure dans des conditions réelles. Lorsque la demande augmente, vous n'avez pas besoin de mettre à l'échelle toute la plateforme : vous pouvez ne mettre à l'échelle que les services sous pression, par exemple le calcul ou le réseau. Lorsque vous voulez introduire une nouvelle fonctionnalité ou mettre à niveau un composant, vous pouvez le faire sans risquer une interruption de service sur l'ensemble du système. Et si quelque chose échoue, l'impact est généralement limité à un seul service plutôt que de se propager à tout votre environnement.
-
-Un autre avantage majeur est l'extensibilité. Comme les services communiquent via des API bien définies, il devient beaucoup plus facile d'intégrer des outils tiers, des frameworks d'automatisation ou des solutions sur mesure. C'est particulièrement précieux dans les environnements cloud modernes, où flexibilité et interopérabilité sont essentielles.
-
-En bref, les microservices améliorent :
-
-- **L'évolutivité** : les services peuvent être mis à l'échelle indépendamment selon la demande
-- **La flexibilité** : les composants peuvent être remplacés ou mis à niveau sans affecter l'ensemble du système
-- **La résilience** : les défaillances sont isolées au niveau des services individuels
-- **L'extensibilité** : intégration plus facile avec des outils tiers et des solutions sur mesure
+- **Évolutivité** : mise à l'échelle horizontale par service, selon la charge réelle.
+- **Déploiement indépendant** : un service peut être mis à jour sans redéployer la plateforme.
+- **Isolation des pannes** : une défaillance reste circonscrite au service concerné.
+- **Extensibilité** : intégration via API, sans couplage au code des autres services.
+- **Compromis** : complexité opérationnelle, cohérence distribuée, versionnement d'API et besoin de traçage entre services.
 
 ## Services OpenStack essentiels (composants principaux)
 
@@ -37,14 +26,14 @@ En bref, les microservices améliorent :
 
 ### Nova (Calcul)
 
-**Nova** est le moteur de calcul d'OpenStack, chargé de provisionner et de gérer les machines virtuelles (VM). Il gère la capacité de calcul en créant, planifiant, migrant et supprimant des ressources. Il permet l'automatisation des ressources responsables de la virtualisation des services et du calcul haute performance. Nova prend en charge plusieurs hyperviseurs (KVM, Xen, ESXi, Hyper-V), la plupart des clouds s'appuyant sur KVM.
+**Nova** est le service de calcul. Il gère le cycle de vie des instances : création, planification, redimensionnement, migration et suppression. Nova ne virtualise pas lui-même : il délègue l'exécution à un hyperviseur via des pilotes (KVM, Xen, ESXi, Hyper-V). Le placement des instances s'appuie sur le service Placement et sur le scheduler.
 
-Grâce à Nova, les utilisateurs peuvent lancer, arrêter et redimensionner des instances de calcul à la demande, tandis que les administrateurs disposent d'un contrôle fin sur les ressources de calcul, garantissant des performances optimales et une utilisation efficace des ressources grâce à la planification dynamique des VM et aux capacités de migration à chaud (live-migration).
+Composants principaux : `nova-api` (API REST), `nova-scheduler` (sélection d'hôte), `nova-conductor` (accès à la base de données), `nova-compute` (pilote d'hyperviseur). Nova gère les zones de disponibilité, les gabarits (flavors), la migration à chaud et l'évacuation.
 
-**Les responsabilités de Nova en bref :**
+**Responsabilités :**
 
 - Interaction avec l'hyperviseur
-- Planification des instances et gestion du cycle de vie des VM
+- Planification des instances et cycle de vie des VM
 - Mise à l'échelle des charges de calcul
 - Migration des VM entre hyperviseurs
 
@@ -52,119 +41,109 @@ Grâce à Nova, les utilisateurs peuvent lancer, arrêter et redimensionner des 
 
 ### Neutron (Réseau)
 
-**Neutron** est le composant réseau d'OpenStack, qui permet la création et la gestion de réseaux virtuels, de routeurs et de groupes de sécurité. C'est un service piloté par API qui gère tout ce qui touche aux réseaux définis par logiciel, aux ports et aux adresses IP flottantes, permettant une forte isolation entre les tenants et les projets au sein du cloud OpenStack. Il met en œuvre le Virtual Routing and Forwarding (VRF) et le routage distribué, et prend en charge le routage statique et dynamique, la passerelle L2 (L2 Gateway) et des tables de routage séparées.
+**Neutron** fournit le réseau en tant que service. Il gère les réseaux, sous-réseaux, routeurs, ports, groupes de sécurité et adresses IP flottantes. Le réseau défini par logiciel est implémenté par des plugins (ML2) et des agents déployés sur les nœuds.
 
-En faisant abstraction des ressources réseau et en fournissant des API de configuration réseau, Neutron permet aux utilisateurs de bâtir des topologies réseau complexes et d'établir une connectivité sécurisée entre les instances cloud et les réseaux externes.
+Neutron assure l'isolation par tenant (VLAN, VXLAN, GRE), le routage distribué (DVR), le VRF, le routage statique et dynamique (BGP), la passerelle L2, l'IPAM, le pare-feu et les VPN. Les intégrations externes passent par des drivers.
 
-**Les fonctionnalités clés de Neutron en bref :**
+**Fonctionnalités :**
 
 - Réseau défini par logiciel (SDN)
 - Isolation des réseaux par tenant
 - Services de pare-feu
 - Services VPN site à site
-- IPAM, et plus encore
+- IPAM
 
 ![Mascotte du projet OpenStack Cinder](images/cinder.webp)
 
 ### Cinder (Stockage bloc)
 
-Cinder offre des services de stockage bloc pour OpenStack, en fournissant des volumes de stockage persistants pour les VM et les conteneurs. Ce stockage est rendu accessible via une API en libre-service, et l'attachement/détachement de volumes fonctionne en « hot-plug », ce qui signifie que vous n'avez pas besoin d'arrêter une VM en cours d'exécution pour effectuer n'importe quelle opération, y compris les snapshots.
+**Cinder** fournit du stockage bloc persistant sous forme de volumes, snapshots et sauvegardes. Les volumes s'attachent et se détachent à chaud via le driver de l'hyperviseur (iSCSI, Fibre Channel, RBD, etc.).
 
-Avec Cinder, les utilisateurs peuvent créer, attacher, détacher, prendre des snapshots et sauvegarder des volumes de stockage bloc indépendamment des instances de calcul, offrant des solutions de stockage évolutives et fiables pour des charges de travail variées. Les utilisateurs peuvent définir et gérer la quantité de stockage cloud nécessaire à leurs VM.
+Composants principaux : `cinder-api`, `cinder-scheduler`, `cinder-volume`, `cinder-backup`. Les backends sont abstraits par des drivers (Ceph, NetApp, Pure Storage, StorPool, etc.). Les types de volumes permettent de sélectionner un backend et des capacités (QoS, réplication).
 
-Cinder prend en charge plus de 30 backends de stockage, notamment Ceph, Dell Power Storage, Huawei, IBM Spectrum, LinBIT, NetApp ONTAP, Pure Storage, StorPool, etc., ce qui signifie que vous pouvez facilement intégrer n'importe quel stockage existant dans votre cloud OpenStack sans avoir à investir dans du nouveau matériel ou une solution de stockage définie par logiciel.
-
-**Les fonctionnalités clés de Cinder en bref :**
+**Fonctionnalités :**
 
 - Gestion des volumes
-- Capacités de snapshot et de sauvegarde
-- Intégration avec divers backends de stockage via des pilotes (drivers)
+- Snapshots et sauvegardes
+- Intégration de backends via des pilotes (drivers)
 
 ![Mascotte du projet OpenStack Keystone](images/keystone.webp)
 
 ### Keystone (Identité)
 
-**Keystone** est le service d'identité d'OpenStack, fournissant des services d'authentification, d'autorisation et de fédération pour les utilisateurs, les services et les ressources. Il est responsable de tous les types d'authentification et d'autorisation dans OpenStack et prend en charge LDAP, l'authentification à deux facteurs (2FA), l'intégration Keycloak, les jetons JWS/JWT et Fernet.
+**Keystone** assure l'identité et le contrôle d'accès. Il gère l'authentification (mot de passe, LDAP, fédération OIDC/SAML, 2FA), les jetons (Fernet, JWT), les domaines, projets, utilisateurs, groupes et rôles. Il publie le catalogue de services utilisé par les clients pour résoudre les endpoints.
 
-En centralisant la gestion des identités, Keystone permet un contrôle d'accès sécurisé et l'authentification unique (single sign-on) sur tous les services OpenStack, garantissant une sécurité et une conformité robustes de votre cloud. Un moteur de politiques flexible est un élément essentiel de chaque service OpenStack, permettant un haut degré de personnalisation et la mise en œuvre de politiques RBAC (contrôle d'accès basé sur les rôles) adaptées à la structure de votre organisation ou à vos exigences de sécurité et d'audit.
+L'autorisation est appliquée par chaque service au moyen d'un moteur de politiques (RBAC, fichiers `policy.yaml`). Keystone délivre le jeton et les rôles ; les services vérifient ensuite les permissions sur leurs ressources.
 
-**Les fonctionnalités clés de Keystone en bref :**
+**Fonctionnalités :**
 
-- Authentification basée sur des jetons pour toutes les interactions API
-- Gestion des utilisateurs, des rôles et des groupes
-- Gestion de la hiérarchie multi-tenant (domaines, projets, sous-domaines)
-- Catalogue de services (liste des services OpenStack disponibles dans le cloud)
-- Fédération avec d'autres fournisseurs d'identité (par exemple Entra ID, LDAP, Keycloak, etc.)
+- Authentification par jeton pour les appels API
+- Gestion des utilisateurs, rôles et groupes
+- Hiérarchie multi-tenant (domaines, projets)
+- Catalogue de services
+- Fédération avec des fournisseurs d'identité externes (Entra ID, LDAP, Keycloak)
 
 ![Mascotte du projet OpenStack Glance](images/glance.webp)
 
 ### Glance (Service d'images)
 
-Glance est le service d'images d'OpenStack, qui facilite la découverte, l'enregistrement et la récupération d'images de machines virtuelles via le réseau. Ces images sont conservées dans une large gamme de systèmes de stockage back-end pris en charge, les solutions de stockage objet telles que Swift, S3 ou Ceph RBD étant les plus populaires.
+**Glance** est le registre d'images. Il gère les métadonnées et le stockage des images de disques et de conteneurs. Les images sont conservées sur un backend (Swift, S3, Ceph RBD, système de fichiers) et exposées via une API REST.
 
-En maintenant un catalogue d'images préconfigurées, Glance rationalise le processus de déploiement et permet de lancer facilement des instances à partir d'images standardisées. Il permet aux utilisateurs et aux administrateurs d'importer et d'exporter des images dans différents formats (Raw, VHD, VMDK, QCOW2, AMI), en prenant en charge toutes sortes d'hyperviseurs, y compris le choix le plus populaire : KVM.
+Glance prend en charge les formats Raw, QCOW2, VHD, VMDK et AMI, avec conversion possible au téléchargement. Il fournit à Nova les métadonnées matérielles et d'hyperviseur, et gère la signature ainsi que la validation des images.
 
-Enfin, et non des moindres, Glance prend en charge la signature d'images et effectue la validation des signatures afin de garantir la sécurité de votre cloud et de prévenir d'éventuelles attaques de la chaîne d'approvisionnement (supply chain).
-
-**Les fonctionnalités clés de Glance en bref :**
+**Fonctionnalités :**
 
 - Découverte et récupération d'images
-- Intégration du stockage d'images
-- Prise en charge du versionnement
-- Métadonnées d'images qui aident Nova à appliquer des paramètres spéciaux (par exemple pour les VM Windows)
+- Intégration de backends de stockage
+- Versionnement
+- Métadonnées d'image utilisées par Nova (par exemple pour les VM Windows)
 
 ![Mascotte OpenStack Horizon](images/horizon.webp)
 
 ### Horizon (Tableau de bord)
 
-**Horizon** fournit une interface de tableau de bord web pour OpenStack, offrant aux administrateurs et aux utilisateurs un endroit unifié pour gérer et surveiller toutes les ressources du cloud. Avec Horizon, les utilisateurs peuvent visualiser et contrôler leurs projets OpenStack en créant et en gérant des VM, des volumes, des réseaux, etc.
+**Horizon** est l'interface web d'administration et de self-service. C'est une application Django qui appelle les API des services et ne stocke pas d'état métier. Elle propose des vues utilisateur et administrateur, extensibles par des panneaux et des plugins. Skyline est une alternative plus récente.
 
-Horizon est basé sur le populaire framework web Django et permet une personnalisation telle que le changement de thème et l'utilisation de vos propres couleurs et logos pour personnaliser l'expérience cloud de votre organisation.
+**Fonctionnalités :**
 
-**Les fonctionnalités clés d'Horizon en bref :**
-
-- Tableau de bord convivial
-- Contrôles administratifs dans une vue séparée
-- Provisionnement en libre-service de toutes les ressources (VM, stockage bloc, réseaux, routeurs, etc.)
+- Interface web d'administration
+- Vue administrateur distincte des projets
+- Provisionnement en libre-service (VM, stockage bloc, réseaux, routeurs)
 
 ![Mascotte du projet OpenStack Barbican](images/barbican.webp)
 
 ### Barbican (Gestion des clés)
 
-**Barbican** est le service de gestion des clés d'OpenStack, conçu pour gérer et stocker des secrets de sécurité tels que des clés de chiffrement, des certificats et des mots de passe. En fournissant un référentiel centralisé et sécurisé pour la gestion des informations sensibles, Barbican renforce la posture de sécurité des déploiements OpenStack, garantissant que les clés cryptographiques et autres secrets sont traités avec les plus hauts niveaux de sécurité.
+**Barbican** gère les secrets : clés de chiffrement, certificats et identifiants. Il fournit un stockage centralisé avec contrôle d'accès, versionnement et prise en charge des modules de sécurité matériels (HSM). Nova l'utilise pour le chiffrement des disques ; Octavia l'utilise pour les certificats TLS des répartiteurs de charge.
 
-**Les fonctionnalités clés de Barbican en bref :**
+**Fonctionnalités :**
 
 - Stockage sécurisé des secrets (clés, certificats, identifiants)
-- Prise en charge des modules de sécurité matériels (HSM)
-- Nova s'intègre à Barbican pour le chiffrement des disques
-- Octavia (LBaaS) peut récupérer des certificats SSL depuis Barbican pour ses répartiteurs de charge
+- Prise en charge des HSM
+- Intégration avec Nova (chiffrement des disques)
+- Intégration avec Octavia (certificats SSL)
 
 ![Mascotte du projet OpenStack Heat](images/heat.webp)
 
 ### Heat (Orchestration)
 
-**Heat** est le service d'orchestration d'OpenStack, permettant aux utilisateurs de définir et de gérer l'infrastructure en tant que code (IaC) au moyen de modèles (templates). En automatisant le déploiement et la mise à l'échelle des ressources cloud, Heat rationalise le processus de provisionnement d'applications et de services complexes sur OpenStack, améliorant agilité et efficacité. L'utilisation de l'IaC est considérée comme une meilleure pratique du secteur : elle favorise la collaboration des équipes, accélère les déploiements et réduit les erreurs humaines.
+**Heat** orchestre l'infrastructure en tant que code. Il interprète des templates HOT (et CloudFormation) décrivant des ressources OpenStack et leurs dépendances, puis pilote les API pour créer, mettre à jour ou supprimer des stacks. Il gère les dépendances, le rollback et l'autoscaling via des groupes de ressources.
 
-OpenStack Heat prend bien en charge les modèles CloudFormation, bien connus des utilisateurs d'AWS, ce qui facilite la migration d'AWS vers OpenStack.
+**Fonctionnalités :**
 
-**Les fonctionnalités clés de Heat en bref :**
-
-- Infrastructure en tant que code (IaC) à l'aide de modèles
+- Infrastructure en tant que code (IaC) par templates
 - Provisionnement automatisé d'environnements complexes
-- Gestion des dépendances entre les ressources (par exemple VM et répartiteurs de charge)
+- Gestion des dépendances entre ressources (VM, répartiteurs de charge)
 
 ![Mascotte du projet OpenStack Swift](images/swift.webp)
 
 ### Swift (Stockage objet)
 
-**Swift** est un service de stockage objet qui fournit une solution de stockage objet durable et évolutive horizontalement. Il possède de grandes capacités de tolérance aux pannes pour stocker et récupérer de grands volumes de données non structurées grâce à une API RESTful similaire à l'API Simple Storage Service (AWS S3), qui est aujourd'hui le standard de facto du secteur.
+**Swift** est le stockage objet distribué. Il expose une API REST, avec un middleware de compatibilité S3, et organise les données en comptes, conteneurs et objets. L'architecture repose sur des serveurs proxy et des serveurs account/container/object, avec des anneaux (rings) pour la distribution et la réplication.
 
-Swift permet aux utilisateurs de stocker des données sous forme d'objets dans des conteneurs, facilitant un accès transparent et une réplication sur des clusters de stockage distribués. Étant un stockage distribué, il est également utilisé pour fournir un stockage redondant au sein de serveurs regroupés en cluster. Il est parfaitement capable de gérer des pétaoctets de données.
+Swift assure la durabilité par réplication ou erasure coding, la tolérance aux pannes et la scalabilité horizontale. Ceph (S3/RBD) est souvent utilisé comme alternative pour le stockage objet natif.
 
-Bien que Swift soit l'un des premiers composants d'OpenStack et qu'il soit prêt pour la production, de nombreuses entreprises préfèrent utiliser l'API S3 native pour le stockage objet fournie par Ceph — une solution de stockage définie par logiciel open source souvent utilisée avec OpenStack. Il est également possible d'activer un middleware de compatibilité AWS S3 pour Swift, mais celui-ci tend à être plus lent que l'API Swift native.
-
-**Les fonctionnalités clés de Swift en bref :**
+**Fonctionnalités :**
 
 - Stockage hautement évolutif
 - Redondance et durabilité des données
@@ -174,11 +153,11 @@ Bien que Swift soit l'un des premiers composants d'OpenStack et qu'il soit prêt
 
 ### Interfaces web et orchestration
 
-- **Skyline** : tableau de bord web moderne, alternative à Horizon, avec API REST et interface Python.
-- **Mistral** : service de workflows (Workflow-as-a-Service) pour exécuter des tâches asynchrones et des processus métier.
-- **Aodh** : service d'alertes basé sur les métriques de télémétrie ; déclenche des actions comme l'auto-scaling ou l'orchestration.
-- **Blazar** : réservation de ressources (calcul, stockage) pour garantir la capacité sur un créneau donné.
-- **Zaqar** : messagerie multi-tenant (files et notifications) exposée via une API REST.
+- **Skyline** : interface web alternative à Horizon, avec API REST.
+- **Mistral** : workflows (Workflow-as-a-Service) pour des tâches asynchrones et des processus métier.
+- **Aodh** : alertes basées sur les métriques de télémétrie ; déclenche des actions (auto-scaling, orchestration).
+- **Blazar** : réservation de ressources (calcul, stockage) sur un créneau donné.
+- **Zaqar** : messagerie multi-tenant (files et notifications) via API REST.
 
 ### Cycle de vie applicatif
 
@@ -205,34 +184,31 @@ Bien que Swift soit l'un des premiers composants d'OpenStack et qu'il soit prêt
 
 - **Placement** : suivi des inventaires et des allocations de ressources (vCPU, RAM, disque), utilisé par Nova pour l'ordonnancement.
 
-## Comment ces services fonctionnent ensemble
+## Interaction des services
 
-Chaque service OpenStack communique via des API HTTP REST, et la plupart des services utilisent des files d'attente AMQP basées sur RabbitMQ pour la communication au sein d'un même service. Une base de données MySQL ou compatible est nécessaire pour conserver les informations persistantes sur l'état du cloud, telles que les noms de projets, les utilisateurs, les rôles, les noms de machines virtuelles, les plages d'adresses IP réseau, etc. Ce couplage lâche est ce qui permet à OpenStack de fonctionner comme une plateforme basée sur les microservices. Schématiquement, cette architecture est représentée sur le diagramme ci-dessous :
+Les services communiquent par API HTTP REST. Au sein d'un service, les composants échangent via une file AMQP (RabbitMQ). Chaque service possède sa propre base de données (MySQL/MariaDB ou autre) et ne partage pas son schéma. Ce couplage faible permet des déploiements et des montées en version indépendants.
 
 ![Architecture microservices d'OpenStack](images/openstack-microservice-diagram.webp)
 
 *Architecture microservices d'OpenStack*
 
-Examinons un scénario typique de provisionnement de VM. Un utilisateur ou un administrateur se connecte au tableau de bord web tel qu'OpenStack Horizon ou Skyline. L'utilisateur doit être authentifié via une méthode prise en charge, qui est par défaut le couple nom d'utilisateur / mot de passe, mais qui pourrait aussi être un SSO via OIDC ou LDAP par exemple. (Alternativement, une CLI OpenStack ou des outils IaC tels qu'OpenTofu ou Ansible peuvent être utilisés pour interagir avec OpenStack.)
+## Scénario : création d'une instance
 
-Chaque requête API dans OpenStack doit être vérifiée par le service d'identité Keystone. Cela se produit non seulement lors de la connexion à l'interface web, mais aussi lorsqu'un utilisateur demande une nouvelle VM ou liste les VM existantes du projet. En coulisses, lorsqu'une nouvelle VM est demandée, voici ce qui se passe :
+1. L'utilisateur s'authentifie auprès de Keystone (interface web, CLI ou outil IaC) et obtient un jeton.
+2. Chaque appel API est validé par Keystone : jeton, rôles et politiques.
+3. Nova reçoit la requête, vérifie les quotas, interroge Placement pour les ressources disponibles, puis sélectionne un hôte via le scheduler.
+4. Neutron crée un port et effectue son rattachement (port binding) au réseau demandé.
+5. Glance fournit l'image de base.
+6. Cinder crée et attache le volume si un stockage bloc est demandé.
+7. `nova-compute` démarre l'instance sur l'hyperviseur ; son état passe à `ACTIVE`.
 
-- Keystone authentifie la requête
-- Nova planifie l'instance en fonction de la zone de disponibilité (AZ) et du gabarit (flavor) demandés, puis trouve un hyperviseur optimal dans le cloud selon l'état actuel
-- Neutron provisionne un port virtuel et effectue son rattachement (port binding) au réseau demandé
-- Glance fournit l'image de base pour le système d'exploitation
-- Cinder provisionne et monte le stockage bloc pour la VM
-- La VM devient active dans OpenStack Nova et dans le tableau de bord
+Le provisionnement prend généralement 30 à 60 secondes. En cas d'échec, Nova réessaie (3 fois par défaut) sur un autre hôte ; si les tentatives échouent, l'instance passe en état `ERROR` avec un message exploitable pour le diagnostic.
 
-Cette orchestration se fait de manière transparente et prend en moyenne 30 à 60 secondes. Si le processus échoue à une certaine étape, OpenStack Nova réessaiera 3 fois (par défaut) pour éventuellement provisionner une VM sur un autre hyperviseur. Si ces tentatives échouent, la VM passera dans un état d'erreur avec un message d'erreur pour faciliter le dépannage.
+## Cas d'usage
 
-## Cas d'usage d'OpenStack : où cette architecture excelle
-
-Bien que l'architecture elle-même soit puissante, sa véritable valeur apparaît clairement dans les déploiements concrets. OpenStack est utilisé dans un large éventail de secteurs et de scénarios, notamment :
-
-- Environnements de cloud privé
-- Environnements de cloud public
-- Télécoms et NFV
-- Informatique en périphérie (edge computing)
-- Infrastructures IA/ML/HPC
-- Alternative à VMware
+- **Cloud privé** : IaaS interne, self-service et isolation par projet.
+- **Cloud public** : mutualisation de ressources et facturation par usage.
+- **Télécoms et NFV** : fonctions réseau virtualisées et orchestration.
+- **Edge computing** : déploiements de petite taille en périphérie.
+- **IA/ML/HPC** : accès aux GPU et accélérateurs via Cyborg.
+- **Alternative à VMware** : migration d'infrastructures virtualisées.
