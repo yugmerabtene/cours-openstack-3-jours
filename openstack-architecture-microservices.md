@@ -250,6 +250,55 @@ Les processus internes ne sont pas exposés aux utilisateurs, mais portent l'imp
 
 ## Scénario : création d'une instance
 
+Le diagramme ci-dessous reprend la séquence des appels entre les services.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Utilisateur
+    participant C as Client Horizon / CLI / IaC
+    participant K as Keystone
+    participant N as Nova API
+    participant S as Nova Scheduler
+    participant P as Placement
+    participant Ne as Neutron
+    participant G as Glance
+    participant Ci as Cinder
+    participant Q as RabbitMQ
+    participant Nc as nova-compute
+    participant H as Hyperviseur
+
+    U->>C: Demande de création d'instance
+    C->>K: Authentification (identifiants ou SSO)
+    K-->>C: Jeton + catalogue de services
+    C->>N: POST /servers (jeton)
+    N->>K: Validation du jeton, des rôles et des politiques
+    K-->>N: Autorisé
+    N->>N: Vérification des quotas
+    N->>P: Candidats d'allocation (vCPU, RAM, disque)
+    P-->>N: Inventaire et candidats
+    N->>S: Sélection d'un hôte
+    S->>P: Réservation de l'allocation
+    P-->>S: Allocation confirmée
+    S-->>N: Hôte retenu
+    N->>Ne: Création d'un port réseau
+    Ne-->>N: Port créé et port binding
+    N->>G: Récupération de l'image
+    G-->>N: Métadonnées de l'image
+    opt Stockage bloc demandé
+        N->>Ci: Création et attachement du volume
+        Ci-->>N: Volume attaché
+    end
+    N->>Q: Requête de build (RPC)
+    Q->>Nc: Consommation de la requête
+    Nc->>H: Démarrage de l'instance (libvirt/KVM)
+    H-->>Nc: Instance démarrée
+    Nc-->>N: État ACTIVE (via le conductor)
+    N-->>C: Instance ACTIVE
+    C-->>U: Instance disponible
+    Note over N,Ne: Chaque appel API est validé par Keystone (jeton, rôles, politiques).
+```
+
 1. L'utilisateur s'authentifie auprès de Keystone (interface web, CLI ou outil IaC) et obtient un jeton.
 2. Chaque appel API est validé par Keystone : jeton, rôles et politiques.
 3. Nova reçoit la requête, vérifie les quotas, interroge Placement pour les ressources disponibles, puis sélectionne un hôte via le scheduler.
