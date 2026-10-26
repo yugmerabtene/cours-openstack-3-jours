@@ -159,6 +159,27 @@ kvm-ok
 - [ ] Virtualisation matérielle active côté hôte et `/dev/kvm` présent dans la VM
 - [ ] `kvm-ok` conclut positivement (ou refus constaté et compris). Si `/dev/kvm` absent malgré VT-x/AMD-V activé, vérifier Hyper-V/WSL2/VBS (les désactiver) ou BIOS, et prévoir mode QEMU (plus lent).
 
+> **Dépannage — `/dev/kvm` absent sous Windows 11**
+>
+> Hyper-V, WSL2 ou l’isolation du noyau (VBS) réservent VT-x/AMD-V. Dans
+> PowerShell **administrateur** :
+>
+> ```powershell
+> Disable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+> Disable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart
+> Disable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -NoRestart
+> bcdedit /set hypervisorlaunchtype off
+> shutdown /s /f /t 0
+> ```
+>
+> Désactiver aussi **Sécurité Windows → Isolation du noyau → Intégrité de la
+> mémoire**, puis relancer la VM et vérifier `ls -l /dev/kvm`.
+>
+> Procédure complète (BIOS, `VBox.log`, cas AMD/Intel, réactivation) :
+> [annexe de dépannage KVM sous Windows 11](annexe-depannage-kvm-windows11.md).
+> Sans `/dev/kvm`, DevStack utilise QEMU : le cours reste faisable, les
+> instances sont seulement plus lentes.
+
 **Exercice 0.3 — Réseau de gestion et accès SSH (5 min)**
 
 ```text
@@ -898,6 +919,8 @@ kvm-ok
 ```
 
 > **Bon à savoir** — En l’absence de `/dev/kvm`, DevStack bascule en émulation (`LIBVIRT_TYPE=qemu`, processeur virtuel « Nehalem »). Le cloud reste fonctionnel et toutes les commandes de la formation passent ; seuls les démarrages d’instances deviennent lents (minutes au lieu de secondes). À annoncer pour éviter une conclusion hâtive de panne.
+
+> **Dépannage Windows 11** — Si `/dev/kvm` reste absent après ces contrôles, suivre l’[annexe de dépannage KVM](annexe-depannage-kvm-windows11.md) : Hyper-V, VBS, BIOS, `VBox.log` et réactivation après le laboratoire.
 
 **Scénarios de repli** selon les ressources réelles du poste :
 

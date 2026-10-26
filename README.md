@@ -21,6 +21,7 @@ pas à pas au jour 1.
 - [Démarrage rapide](#démarrage-rapide)
 - [Conventions du laboratoire](#conventions-du-laboratoire)
 - [Compétences visées](#compétences-visées)
+- [Annexe — Dépannage KVM sous Windows 11](annexe-depannage-kvm-windows11.md)
 - [Références](#références)
 
 ## Présentation
@@ -123,6 +124,8 @@ synthèse et une feuille de route.
   d’espace disque libre.
 - Accès Internet pour télécharger l’image Ubuntu, les paquets et le dépôt
   DevStack.
+- Sous Windows 11, si `/dev/kvm` est absent dans la VM (Hyper-V, WSL2 ou VBS
+  actifs), appliquer l’[annexe de dépannage KVM](annexe-depannage-kvm-windows11.md).
 
 ### Machine virtuelle
 
@@ -147,17 +150,22 @@ synthèse et une feuille de route.
 ├── README.md   Ce fichier : présentation, sommaire et prérequis
 ├── jour-1.md   Jour 1 : concepts, OpenStack et installation
 ├── jour-2.md   Jour 2 : configuration, administration et surveillance
-└── jour-3.md   Jour 3 : conception, sécurisation et sauvegarde
+├── jour-3.md   Jour 3 : conception, sécurisation et sauvegarde
+└── annexe-depannage-kvm-windows11.md   Dépannage KVM sous Windows 11
 ```
 
 Les trois supports suivent un déroulé continu : chacun suppose que les LAB des
 journées précédentes ont été réalisés. Les commandes, les valeurs du
 laboratoire et les résultats attendus sont indiqués dans chaque fichier.
 
+L’annexe de dépannage KVM complète le préambule du jour 1 pour les hôtes
+Windows 11 dont la VM n’expose pas `/dev/kvm`.
+
 ## Démarrage rapide
 
 1. Lire le préambule du [jour 1](jour-1.md) et créer la VM `lab-openstack`.
-2. Installer Ubuntu Server, configurer le réseau et vérifier `/dev/kvm`.
+2. Installer Ubuntu Server, configurer le réseau et vérifier `/dev/kvm`. En cas
+   d’absence sous Windows 11, suivre l’[annexe de dépannage KVM](annexe-depannage-kvm-windows11.md).
 3. Installer DevStack `stable/2026.1` et contrôler le cloud avec
    `openstack token issue` et `openstack service list`.
 4. Dérouler le [jour 1](jour-1.md), puis le [jour 2](jour-2.md) et enfin le
