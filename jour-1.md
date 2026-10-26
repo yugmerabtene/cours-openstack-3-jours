@@ -129,7 +129,7 @@ L'interface `VirtualBox Host-Only Ethernet Adapter` doit apparaître avec l'IP `
 
 ```text
 # Côté machine hôte (VM éteinte) : activer la virtualisation imbriquée
-VBoxManage modifyvm "lab-openstack" --nested-hw-virt on
+& "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" modifyvm "ubuntu" --nested-hw-virt on
 # modifyvm : modifie les paramètres de la VM
 # --nested-hw-virt on : autorise VT-x/AMD-V à l'intérieur de la VM
 ```
