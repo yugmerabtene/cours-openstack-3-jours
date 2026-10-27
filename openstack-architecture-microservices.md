@@ -145,7 +145,6 @@ Swift assure la durabilité par réplication ou erasure coding, la tolérance au
 - Redondance et durabilité des données
 - Accès via API RESTful
 
-## Autres services représentés sur le schéma
 
 ### Interfaces web et orchestration
 
